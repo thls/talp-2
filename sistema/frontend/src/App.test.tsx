@@ -386,6 +386,47 @@ describe("Detalhe da turma (alunos e avaliações)", () => {
     );
   });
 
+  it("remove avaliação quando conceito é limpo", async () => {
+    fetchMock.mockReset();
+    mockStudentList([{ id: "s1", name: "Ana", cpf: "12345678901", email: "ana@example.com" }]);
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        classes: [{ id: "c1", topic: "ES", year: 2026, semester: 1, capacity: 40, studentIds: ["s1"] }]
+      })
+    });
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        ...classData,
+        grades: [{ studentId: "s1", classId: "c1", meta: "Requisitos", concept: "MANA" }]
+      })
+    });
+
+    render(<App />);
+    await screen.findByRole("heading", { name: /gerenciamento de alunos/i });
+    fireEvent.click(screen.getByRole("button", { name: /turmas/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /ver turma/i }));
+
+    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ ...classData, grades: [] })
+    });
+
+    fireEvent.change(await screen.findByLabelText(/requisitos de ana/i), {
+      target: { value: "" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: /salvar/i }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining("/grades/s1/Requisitos"),
+        expect.objectContaining({ method: "DELETE" })
+      );
+    });
+  });
+
   it("exibe conceitos já salvos no select da célula", async () => {
     fetchMock.mockReset();
     mockStudentList([{ id: "s1", name: "Ana", cpf: "12345678901", email: "ana@example.com" }]);

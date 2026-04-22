@@ -388,16 +388,22 @@ export function App() {
     try {
       setLoading(true);
       for (const { meta, concept } of editsForStudent) {
-        const res = await fetch(
-          `${API_URL}/classes/${classDetail.id}/grades/${studentId}/${encodeURIComponent(meta)}`,
-          {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ concept })
-          }
-        );
+        const endpoint = `${API_URL}/classes/${classDetail.id}/grades/${studentId}/${encodeURIComponent(meta)}`;
+        const res =
+          concept === ""
+            ? await fetch(endpoint, { method: "DELETE" })
+            : await fetch(endpoint, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ concept })
+              });
         if (!res.ok) {
-          const data = (await res.json()) as { message?: string };
+          let data: { message?: string } = {};
+          try {
+            data = (await res.json()) as { message?: string };
+          } catch {
+            data = {};
+          }
           setError(data.message ?? "Erro ao salvar avaliação.");
           return;
         }
