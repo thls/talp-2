@@ -5,3 +5,4 @@ coverage
 backend/data/students.json
 backend/data/classes.json
 backend/data/grades.json
+backend/data/email-logs.json
