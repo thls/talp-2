@@ -16,8 +16,6 @@ type Props = {
   onNavigateToDetail: (classId: string) => void;
   onStartEdit: (cls: Class) => void;
   onRequestDelete: (cls: Class) => void;
-  onConfirmDelete: (cls: Class) => void;
-  onCancelDelete: () => void;
   calendarItems: string[];
   calendarView: boolean;
   onToggleCalendarView: (calendar: boolean) => void;
@@ -36,8 +34,6 @@ export function ClassesRoute({
   onNavigateToDetail,
   onStartEdit,
   onRequestDelete,
-  onConfirmDelete,
-  onCancelDelete,
   calendarItems,
   calendarView,
   onToggleCalendarView
@@ -221,16 +217,7 @@ export function ClassesRoute({
                           <button type="button" onClick={() => onRequestDelete(cls)} className="rounded border border-outline-variant px-3 py-1 text-body-sm hover:border-primary">
                             Remover
                           </button>
-                          {pendingDeleteClassId === cls.id && (
-                            <>
-                              <button type="button" onClick={() => onConfirmDelete(cls)} className="rounded border border-outline-variant px-3 py-1 text-body-sm">
-                                Confirmar remoção
-                              </button>
-                              <button type="button" onClick={onCancelDelete} className="rounded border border-outline-variant px-3 py-1 text-body-sm">
-                                Cancelar remoção
-                              </button>
-                            </>
-                          )}
+                          {pendingDeleteClassId === cls.id && <span className="text-xs text-secondary">Aguardando confirmação...</span>}
                         </div>
                       </td>
                     </tr>

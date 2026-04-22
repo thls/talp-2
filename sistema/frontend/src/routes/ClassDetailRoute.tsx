@@ -33,6 +33,13 @@ export function ClassDetailRoute({
   onGradeEdit,
   onSaveStudentGrades
 }: Props) {
+  const conceptDistribution = gradeConcepts.map((concept) => {
+    const total = classDetail.grades.length;
+    const count = classDetail.grades.filter((grade) => grade.concept === concept).length;
+    const percent = total > 0 ? Math.round((count / total) * 100) : 0;
+    return { concept, count, percent };
+  });
+
   return (
     <section className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -61,10 +68,11 @@ export function ClassDetailRoute({
           <div className={`${panelClass} p-6`}>
             <h3 className="mb-4 text-h3 text-primary">Distribuição de conceitos</h3>
             <div className="flex h-40 items-end justify-between gap-3">
-              {[15, 25, 65, 85, 45].map((value, idx) => (
-                <div key={`${value}-${idx}`} className="flex flex-1 flex-col items-center gap-2">
-                  <div className="w-full rounded-t-lg bg-slate-200" style={{ height: `${value}%` }} />
-                  <span className="text-label-caps text-secondary">{["F", "D", "C", "B", "A"][idx]}</span>
+              {conceptDistribution.map((item) => (
+                <div key={item.concept} className="flex flex-1 flex-col items-center gap-2">
+                  <div className="w-full rounded-t-lg bg-slate-200" style={{ height: `${Math.max(item.percent, 6)}%` }} />
+                  <span className="text-label-caps text-secondary">{item.concept}</span>
+                  <span className="text-[10px] text-secondary">{item.count}</span>
                 </div>
               ))}
             </div>

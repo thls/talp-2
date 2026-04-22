@@ -40,7 +40,7 @@ export function DashboardRoute({
           className="flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-on-primary shadow-sm hover:bg-primary-container"
         >
           <span className="material-symbols-outlined text-lg">add</span>
-          Nova matrícula
+          Ir para turmas
         </button>
       </div>
       <div className="mb-2 grid gap-6 md:grid-cols-4">

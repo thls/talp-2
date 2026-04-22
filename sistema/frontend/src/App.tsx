@@ -39,6 +39,11 @@ function toApiCpf(cpf: string): string {
 // ─── App ─────────────────────────────────────────────────────────────────────
 
 export function App() {
+  type DeleteTarget =
+    | { type: "student"; student: Student }
+    | { type: "class"; cls: Class }
+    | null;
+
   const [view, setView] = useState<View>({ type: "students" });
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -50,6 +55,7 @@ export function App() {
   const [studentForm, setStudentForm] = useState<StudentFormValues>(initialStudentForm);
   const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
   const [pendingDeleteStudentId, setPendingDeleteStudentId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
 
   // Classes state
   const [classes, setClasses] = useState<Class[]>([]);
@@ -205,9 +211,13 @@ export function App() {
   function requestDeleteStudent(student: Student) {
     clearMessages();
     setPendingDeleteStudentId(student.id);
+    setDeleteTarget({ type: "student", student });
   }
 
-  function cancelDeleteStudent() { setPendingDeleteStudentId(null); }
+  function cancelDeleteStudent() {
+    setPendingDeleteStudentId(null);
+    setDeleteTarget(null);
+  }
 
   async function confirmDeleteStudent(student: Student) {
     try {
@@ -220,6 +230,7 @@ export function App() {
       setStudents((c) => c.filter((s) => s.id !== student.id));
       if (editingStudentId === student.id) cancelEditStudent();
       setPendingDeleteStudentId(null);
+      setDeleteTarget(null);
       setSuccess("Aluno removido com sucesso.");
     } catch {
       setError("Erro de comunicação com o servidor.");
@@ -303,9 +314,13 @@ export function App() {
   function requestDeleteClass(cls: Class) {
     clearMessages();
     setPendingDeleteClassId(cls.id);
+    setDeleteTarget({ type: "class", cls });
   }
 
-  function cancelDeleteClass() { setPendingDeleteClassId(null); }
+  function cancelDeleteClass() {
+    setPendingDeleteClassId(null);
+    setDeleteTarget(null);
+  }
 
   async function confirmDeleteClass(cls: Class) {
     try {
@@ -318,6 +333,7 @@ export function App() {
       setClasses((c) => c.filter((c2) => c2.id !== cls.id));
       if (editingClassId === cls.id) cancelEditClass();
       setPendingDeleteClassId(null);
+      setDeleteTarget(null);
       setSuccess("Turma removida com sucesso.");
     } catch {
       setError("Erro de comunicação com o servidor.");
@@ -445,11 +461,12 @@ export function App() {
   const filteredStudents = useMemo(() => {
     const term = studentsFilterTerm.trim().toLowerCase();
     if (!term) return students;
+    const normalizedTerm = term.replace(/\D/g, "");
     return students.filter(
       (student) =>
         student.name.toLowerCase().includes(term) ||
         student.email.toLowerCase().includes(term) ||
-        student.cpf.includes(term.replace(/\D/g, ""))
+        (normalizedTerm.length > 0 && student.cpf.includes(normalizedTerm))
     );
   }, [students, studentsFilterTerm]);
 
@@ -544,7 +561,7 @@ export function App() {
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white/80 px-8 backdrop-blur-md">
           <div className="flex items-center gap-3">
             <button type="button" onClick={() => navigateTo({ type: "dashboard" })} className="rounded-full p-2 text-[#2D3282] hover:bg-slate-100">
-              <span className="material-symbols-outlined">menu</span>
+              <span className="material-symbols-outlined">home</span>
             </button>
             <h2 className="font-h3 text-lg text-[#2D3282]">
               Visão institucional
@@ -639,13 +656,10 @@ export function App() {
               onCancelEdit={cancelEditStudent}
               onStartEdit={startEditStudent}
               onRequestDelete={requestDeleteStudent}
-              onConfirmDelete={(student) => {
-                void confirmDeleteStudent(student);
-              }}
-              onCancelDelete={cancelDeleteStudent}
               filterTerm={studentsFilterTerm}
               onFilterTermChange={setStudentsFilterTerm}
               onExportCsv={exportStudentsCsv}
+              onClearFilter={() => setStudentsFilterTerm("")}
             />
           )}
 
@@ -663,10 +677,6 @@ export function App() {
               onNavigateToDetail={(classId) => navigateTo({ type: "classDetail", classId })}
               onStartEdit={startEditClass}
               onRequestDelete={requestDeleteClass}
-              onConfirmDelete={(cls) => {
-                void confirmDeleteClass(cls);
-              }}
-              onCancelDelete={cancelDeleteClass}
               calendarItems={classesCalendarItems}
               calendarView={calendarView}
               onToggleCalendarView={setCalendarView}
@@ -696,6 +706,41 @@ export function App() {
                 void handleSaveStudentGrades(studentId);
               }}
             />
+          )}
+
+          {deleteTarget && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
+              <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-xl">
+                <h3 className="text-h3 text-primary">Confirmar remoção</h3>
+                <p className="mt-2 text-body-md text-secondary">
+                  {deleteTarget.type === "student"
+                    ? `Deseja remover o aluno ${deleteTarget.student.name}?`
+                    : `Deseja remover a turma ${deleteTarget.cls.topic}?`}
+                </p>
+                <div className="mt-6 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (deleteTarget.type === "student") cancelDeleteStudent();
+                      if (deleteTarget.type === "class") cancelDeleteClass();
+                    }}
+                    className="rounded border border-slate-200 px-4 py-2"
+                  >
+                    Cancelar remoção
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (deleteTarget.type === "student") void confirmDeleteStudent(deleteTarget.student);
+                      if (deleteTarget.type === "class") void confirmDeleteClass(deleteTarget.cls);
+                    }}
+                    className="rounded bg-error px-4 py-2 text-white"
+                  >
+                    Confirmar remoção
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
         </main>
       </div>

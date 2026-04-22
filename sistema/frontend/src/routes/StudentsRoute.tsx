@@ -15,11 +15,10 @@ type Props = {
   onCancelEdit: () => void;
   onStartEdit: (student: Student) => void;
   onRequestDelete: (student: Student) => void;
-  onConfirmDelete: (student: Student) => void;
-  onCancelDelete: () => void;
   filterTerm: string;
   onFilterTermChange: (value: string) => void;
   onExportCsv: () => void;
+  onClearFilter: () => void;
 };
 
 export function StudentsRoute({
@@ -36,12 +35,23 @@ export function StudentsRoute({
   onCancelEdit,
   onStartEdit,
   onRequestDelete,
-  onConfirmDelete,
-  onCancelDelete,
   filterTerm,
   onFilterTermChange,
-  onExportCsv
+  onExportCsv,
+  onClearFilter
 }: Props) {
+  const normalizedTerm = filterTerm.trim().toLowerCase();
+  const displayedStudents = !normalizedTerm
+    ? students
+    : students.filter((student) => {
+        const numericTerm = normalizedTerm.replace(/\D/g, "");
+        return (
+          student.name.toLowerCase().includes(normalizedTerm) ||
+          student.email.toLowerCase().includes(normalizedTerm) ||
+          (numericTerm.length > 0 && student.cpf.includes(numericTerm))
+        );
+      });
+
   return (
     <section className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -56,9 +66,9 @@ export function StudentsRoute({
             placeholder="Filtrar por nome, CPF ou email"
             className="w-64 rounded-lg border border-outline-variant bg-surface-container-lowest px-4 py-2 text-body-sm"
           />
-          <button type="button" className="flex items-center gap-2 rounded-lg border border-outline-variant bg-surface-container-lowest px-4 py-2 text-body-sm">
-            <span className="material-symbols-outlined text-sm">filter_list</span>
-            Filtro
+          <button type="button" onClick={onClearFilter} className="flex items-center gap-2 rounded-lg border border-outline-variant bg-surface-container-lowest px-4 py-2 text-body-sm">
+            <span className="material-symbols-outlined text-sm">close</span>
+            Limpar filtro
           </button>
           <button type="button" onClick={onExportCsv} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-body-sm text-on-primary">
             <span className="material-symbols-outlined text-sm">file_download</span>
@@ -115,7 +125,7 @@ export function StudentsRoute({
 
           <div className={`${panelClass} overflow-hidden`}>
             <h2 className="border-b border-slate-200 px-6 py-4 text-h3 text-primary">Alunos cadastrados</h2>
-            {students.length === 0 ? (
+            {displayedStudents.length === 0 ? (
               <p className="px-6 py-6 text-secondary">Nenhum aluno cadastrado.</p>
             ) : (
               <div className="overflow-x-auto">
@@ -129,7 +139,7 @@ export function StudentsRoute({
                     </tr>
                   </thead>
                   <tbody>
-                    {students.map((student, idx) => (
+                    {displayedStudents.map((student, idx) => (
                       <tr key={student.id} className={`border-t border-slate-100 hover:bg-slate-50 ${idx % 2 ? "bg-slate-50/50" : ""}`}>
                         <td className={tableCellClass}>{student.name}</td>
                         <td className={tableCellClass}>{student.cpf}</td>
@@ -142,16 +152,7 @@ export function StudentsRoute({
                             <button type="button" onClick={() => onRequestDelete(student)} className="rounded border border-slate-200 px-3 py-1 hover:border-primary">
                               Remover
                             </button>
-                            {pendingDeleteStudentId === student.id && (
-                              <>
-                                <button type="button" onClick={() => onConfirmDelete(student)} className="rounded border border-slate-200 px-3 py-1">
-                                  Confirmar remoção
-                                </button>
-                                <button type="button" onClick={onCancelDelete} className="rounded border border-slate-200 px-3 py-1">
-                                  Cancelar remoção
-                                </button>
-                              </>
-                            )}
+                            {pendingDeleteStudentId === student.id && <span className="text-xs text-secondary">Aguardando confirmação...</span>}
                           </div>
                         </td>
                       </tr>
