@@ -210,6 +210,29 @@ describe("DELETE /classes/:id", () => {
     expect(res.statusCode).toBe(404);
     await app.close();
   });
+
+  it("remove avaliações vinculadas ao excluir turma", async () => {
+    const { app } = await createAppWithTempStore();
+    const student = await createStudent(app);
+    const cls = await createClass(app);
+    await app.inject({
+      method: "POST",
+      url: `/classes/${cls.id}/students`,
+      payload: { studentId: student.id }
+    });
+    await app.inject({
+      method: "PUT",
+      url: `/classes/${cls.id}/grades/${student.id}/Requisitos`,
+      payload: { concept: "MANA" }
+    });
+
+    const del = await app.inject({ method: "DELETE", url: `/classes/${cls.id}` });
+    expect(del.statusCode).toBe(204);
+
+    const gradesAfter = await app.inject({ method: "GET", url: `/classes/${cls.id}/grades` });
+    expect(gradesAfter.statusCode).toBe(404);
+    await app.close();
+  });
 });
 
 describe("GET /classes/:id (detalhe)", () => {

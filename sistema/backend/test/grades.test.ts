@@ -265,3 +265,25 @@ describe("PUT /classes/:classId/grades/:studentId/:meta", () => {
     await app.close();
   });
 });
+
+describe("DELETE /classes/:classId/grades/:studentId/:meta", () => {
+  it("remove avaliação existente", async () => {
+    const { app } = await createAppWithTempStore();
+    const { studentId, classId } = await setupClassWithStudent(app);
+    await app.inject({
+      method: "PUT",
+      url: `/classes/${classId}/grades/${studentId}/Requisitos`,
+      payload: { concept: "MANA" }
+    });
+
+    const remove = await app.inject({
+      method: "DELETE",
+      url: `/classes/${classId}/grades/${studentId}/Requisitos`
+    });
+    expect(remove.statusCode).toBe(204);
+
+    const grades = await app.inject({ method: "GET", url: `/classes/${classId}/grades` });
+    expect((grades.json() as { grades: unknown[] }).grades).toHaveLength(0);
+    await app.close();
+  });
+});
