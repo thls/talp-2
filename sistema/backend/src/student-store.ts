@@ -53,6 +53,50 @@ export class StudentStore {
     return student;
   }
 
+  async update(
+    id: string,
+    input: { name: string; cpf: string; email: string }
+  ): Promise<Student> {
+    const payload = await this.readStudentsFile();
+    const index = payload.students.findIndex((student) => student.id === id);
+    if (index < 0) {
+      throw new Error("STUDENT_NOT_FOUND");
+    }
+
+    const normalizedCpf = normalizeCpf(input.cpf);
+    const normalizedEmail = input.email.trim().toLowerCase();
+    const normalizedName = input.name.trim();
+
+    const cpfInUseByAnotherStudent = payload.students.some(
+      (student) => student.id !== id && student.cpf === normalizedCpf
+    );
+    if (cpfInUseByAnotherStudent) {
+      throw new Error("DUPLICATE_CPF");
+    }
+
+    const current = payload.students[index];
+    const updated: Student = {
+      ...current,
+      name: normalizedName,
+      cpf: normalizedCpf,
+      email: normalizedEmail
+    };
+
+    payload.students[index] = updated;
+    await this.writeStudentsFile(payload);
+    return updated;
+  }
+
+  async remove(id: string): Promise<void> {
+    const payload = await this.readStudentsFile();
+    const nextStudents = payload.students.filter((student) => student.id !== id);
+    if (nextStudents.length === payload.students.length) {
+      throw new Error("STUDENT_NOT_FOUND");
+    }
+    payload.students = nextStudents;
+    await this.writeStudentsFile(payload);
+  }
+
   private async readStudentsFile(): Promise<StudentsFile> {
     try {
       const raw = await readFile(this.filePath, "utf-8");
