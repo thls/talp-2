@@ -1,35 +1,17 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-type Student = { id: string; name: string; cpf: string; email: string };
-
-type Class = {
-  id: string;
-  topic: string;
-  year: number;
-  semester: number;
-  studentIds: string[];
-};
-
-type ClassDetail = Class & { students: Student[]; grades: Grade[] };
-
-type Grade = { studentId: string; classId: string; meta: string; concept: string };
-
-type View =
-  | { type: "dashboard" }
-  | { type: "students" }
-  | { type: "classes" }
-  | { type: "classDetail"; classId: string };
-
-type Stats = {
-  studentCount: number;
-  classCount: number;
-  gradeCount: number;
-};
-
-type StudentFormValues = { name: string; cpf: string; email: string };
-type ClassFormValues = { topic: string; year: string; semester: string };
+import { ClassesRoute } from "./routes/ClassesRoute";
+import { ClassDetailRoute } from "./routes/ClassDetailRoute";
+import { DashboardRoute } from "./routes/DashboardRoute";
+import { StudentsRoute } from "./routes/StudentsRoute";
+import type {
+  Class,
+  ClassDetail,
+  ClassFormValues,
+  Stats,
+  Student,
+  StudentFormValues,
+  View
+} from "./routes/types";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -409,11 +391,6 @@ export function App() {
   const panelClass = "rounded-xl border border-slate-200 bg-white shadow-sm";
   const tableHeaderClass = "px-4 py-3 text-label-caps uppercase tracking-wider text-slate-500";
   const tableCellClass = "px-4 py-4 text-data-table text-slate-700";
-  const dashboardActivities = [
-    { title: "Notas publicadas", desc: "Resultados de Cálculo do semestre foram liberados.", time: "12:45" },
-    { title: "Novas matrículas", desc: "12 novos alunos ingressaram no período atual.", time: "10:30" },
-    { title: "Manutenção", desc: "Portal de alunos ficará indisponível por 15 minutos.", time: "09:15" }
-  ];
   const classesWithMeta = classes.map((cls, idx) => ({
     ...cls,
     room: `Sala ${100 + idx}`,
@@ -532,588 +509,82 @@ export function App() {
           )}
 
           {view.type === "dashboard" && (
-            <section className="space-y-8">
-              <div className="mb-2 flex flex-wrap items-end justify-between gap-4">
-                <div>
-                  <h1 className="text-h1 text-primary">Welcome back, Sarah</h1>
-                  <p className="text-body-lg text-secondary">Here's a summary of the academic performance for the current semester.</p>
-                </div>
-                <button className="flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-on-primary shadow-sm hover:bg-primary-container">
-                  <span className="material-symbols-outlined text-lg">add</span>
-                  New Enrollment
-                </button>
-              </div>
-              <div className="mb-2 grid gap-6 md:grid-cols-4">
-                <article className={`${panelClass} h-32 border-slate-200 p-6 hover:border-primary/30`}>
-                  <div className="mb-4 flex items-center justify-between">
-                    <span className="material-symbols-outlined rounded-lg bg-primary-fixed/50 p-2 text-primary">groups</span>
-                    <span className="text-[12px] font-bold text-tertiary-fixed-dim">+4.2%</span>
-                  </div>
-                  <p className="text-label-caps text-secondary">Total Students</p>
-                  <p className="text-h2 font-black text-on-surface">{stats?.studentCount ?? students.length}</p>
-                </article>
-                <article className={`${panelClass} h-32 border-slate-200 p-6 hover:border-primary/30`}>
-                  <div className="mb-4 flex items-center justify-between">
-                    <span className="material-symbols-outlined rounded-lg bg-primary-fixed/50 p-2 text-primary">school</span>
-                    <span className="text-[12px] font-bold text-secondary">Stable</span>
-                  </div>
-                  <p className="text-label-caps text-secondary">Active Classes</p>
-                  <p className="text-h2 font-black text-on-surface">{stats?.classCount ?? classes.length}</p>
-                </article>
-                <article className={`${panelClass} h-32 border-slate-200 p-6 hover:border-primary/30`}>
-                  <div className="mb-4 flex items-center justify-between">
-                    <span className="material-symbols-outlined rounded-lg bg-primary-fixed/50 p-2 text-primary">assessment</span>
-                    <span className="text-[12px] font-bold text-tertiary-fixed-dim">+1.8%</span>
-                  </div>
-                  <p className="text-label-caps text-secondary">Saved Grades</p>
-                  <p className="text-h2 font-black text-on-surface">{stats?.gradeCount ?? 0}</p>
-                </article>
-                <article className={`${panelClass} h-32 border-slate-200 p-6 hover:border-primary/30`}>
-                  <div className="mb-4 flex items-center justify-between">
-                    <span className="material-symbols-outlined rounded-lg bg-primary-fixed/50 p-2 text-primary">pending_actions</span>
-                    <span className="text-[12px] font-bold text-error">-2.1%</span>
-                  </div>
-                  <p className="text-label-caps text-secondary">Attendance Rate</p>
-                  <p className="text-h2 font-black text-on-surface">92.4%</p>
-                </article>
-              </div>
-              <div className="grid gap-8 xl:grid-cols-3">
-                <div className="space-y-8 xl:col-span-2">
-                  <div className={panelClass}>
-                    <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-6 py-4">
-                      <h3 className="flex items-center gap-2 text-h3 text-primary"><span className="material-symbols-outlined">event</span>Today's Schedule</h3>
-                      <span className="text-body-sm text-secondary">Wednesday</span>
-                    </div>
-                    <div className="divide-y divide-slate-100">
-                      {["09:00 • Advanced Macroeconomics", "11:30 • Digital Ethics & Society", "14:00 • Board Meeting"].map((item) => (
-                        <div key={item} className="px-6 py-4 text-body-md text-on-surface hover:bg-slate-50">{item}</div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className={panelClass}>
-                    <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-                      <h3 className="text-h3 text-primary">Recent Registrations</h3>
-                      <button className="text-body-sm font-bold text-primary">View All</button>
-                    </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left">
-                        <thead className="bg-slate-50/60">
-                          <tr>
-                            <th className={tableHeaderClass}>Student Name</th>
-                            <th className={tableHeaderClass}>Course ID</th>
-                            <th className={tableHeaderClass}>Status</th>
-                            <th className={tableHeaderClass}>Date</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr className="border-t border-slate-100">
-                            <td className={tableCellClass}>Marcus Aurelius</td>
-                            <td className={tableCellClass}>PHL-101</td>
-                            <td className={tableCellClass}><span className="rounded-full bg-tertiary-fixed/40 px-2 py-1 text-[11px] font-bold text-on-tertiary-fixed-variant">Confirmed</span></td>
-                            <td className={tableCellClass}>2 mins ago</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-8">
-                  <div className={panelClass}>
-                    <div className="border-b border-slate-200 bg-slate-50 px-6 py-4">
-                      <h3 className="text-h3 text-primary">Recent Activity</h3>
-                    </div>
-                    <div className="space-y-4 p-6">
-                      {dashboardActivities.map((item) => (
-                        <div key={item.title}>
-                          <p className="text-body-sm font-bold text-on-surface">{item.title}</p>
-                          <p className="text-body-sm text-secondary">{item.desc}</p>
-                          <p className="text-[10px] font-label-caps text-secondary">{item.time}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="rounded-xl bg-primary-container p-6 text-on-primary shadow-sm">
-                    <h3 className="mb-3 text-h3">Department Load</h3>
-                    <p className="text-body-sm text-on-primary-container">Humanities 85%, STEM 94%, Business 72%</p>
-                  </div>
-                </div>
-              </div>
-            </section>
+            <DashboardRoute
+              stats={stats}
+              students={students}
+              classes={classes}
+              panelClass={panelClass}
+              tableHeaderClass={tableHeaderClass}
+              tableCellClass={tableCellClass}
+            />
           )}
 
           {view.type === "students" && (
-            <section className="space-y-8">
-              <div className="flex flex-wrap items-end justify-between gap-4">
-                <div>
-                  <h1 className="text-h1 text-primary">Gerenciamento de alunos</h1>
-                  <p className="text-body-md text-secondary">Student Directory</p>
-                </div>
-                <div className="flex gap-2">
-                  <button type="button" className="flex items-center gap-2 rounded-lg border border-outline-variant bg-surface-container-lowest px-4 py-2 text-body-sm">
-                    <span className="material-symbols-outlined text-sm">filter_list</span>
-                    Filter
-                  </button>
-                  <button type="button" className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-body-sm text-on-primary">
-                    <span className="material-symbols-outlined text-sm">file_download</span>
-                    Export CSV
-                  </button>
-                </div>
-              </div>
-              <div className="grid gap-6 lg:grid-cols-12">
-                <div className="space-y-6 lg:col-span-8">
-                  <div className={`${panelClass} p-6`}>
-                    <form className="grid gap-4 md:grid-cols-4" onSubmit={handleStudentSubmit}>
-                  <div className="md:col-span-2">
-                    <label htmlFor="name" className="mb-1 block text-sm font-medium">Nome</label>
-                    <input
-                      id="name"
-                      name="name"
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2"
-                      value={studentForm.name}
-                      onChange={(e) => setStudentForm((c) => ({ ...c, name: e.target.value }))}
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="cpf" className="mb-1 block text-sm font-medium">CPF</label>
-                    <input
-                      id="cpf"
-                      name="cpf"
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2"
-                      value={studentForm.cpf}
-                      onChange={(e) => setStudentForm((c) => ({ ...c, cpf: e.target.value }))}
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="email" className="mb-1 block text-sm font-medium">Email</label>
-                    <input
-                      id="email"
-                      name="email"
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2"
-                      value={studentForm.email}
-                      onChange={(e) => setStudentForm((c) => ({ ...c, email: e.target.value }))}
-                    />
-                  </div>
-                  <div className="md:col-span-4 flex gap-2">
-                    <button type="submit" disabled={loading} className="rounded-lg bg-primary px-4 py-2 font-semibold text-on-primary hover:bg-primary-container">
-                      {loading ? "Salvando..." : editingStudentId ? "Salvar edição" : "Cadastrar aluno"}
-                    </button>
-                    {editingStudentId && (
-                      <button type="button" onClick={cancelEditStudent} className="rounded-lg border border-slate-200 px-4 py-2">
-                        Cancelar edição
-                      </button>
-                    )}
-                  </div>
-                </form>
-                  </div>
-
-                  <div className={`${panelClass} overflow-hidden`}>
-                    <h2 className="border-b border-slate-200 px-6 py-4 text-h3 text-primary">Alunos cadastrados</h2>
-                {students.length === 0 ? (
-                  <p className="px-6 py-6 text-secondary">Nenhum aluno cadastrado.</p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left font-data-table">
-                      <thead className="bg-slate-50/60">
-                        <tr>
-                          <th className={tableHeaderClass}>Nome</th>
-                          <th className={tableHeaderClass}>CPF</th>
-                          <th className={tableHeaderClass}>Email</th>
-                          <th className={tableHeaderClass}>Ações</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {students.map((student, idx) => (
-                          <tr key={student.id} className={`border-t border-slate-100 hover:bg-slate-50 ${idx % 2 ? "bg-slate-50/50" : ""}`}>
-                            <td className={tableCellClass}>{student.name}</td>
-                            <td className={tableCellClass}>{student.cpf}</td>
-                            <td className={tableCellClass}>{student.email}</td>
-                            <td className={tableCellClass}>
-                              <div className="flex flex-wrap gap-2">
-                                <button type="button" onClick={() => startEditStudent(student)} className="rounded border border-slate-200 px-3 py-1 hover:border-primary">
-                                  Editar
-                                </button>
-                                <button type="button" onClick={() => requestDeleteStudent(student)} className="rounded border border-slate-200 px-3 py-1 hover:border-primary">
-                                  Remover
-                                </button>
-                                {pendingDeleteStudentId === student.id && (
-                                  <>
-                                    <button type="button" onClick={() => confirmDeleteStudent(student)} className="rounded border border-slate-200 px-3 py-1">
-                                      Confirmar remoção
-                                    </button>
-                                    <button type="button" onClick={cancelDeleteStudent} className="rounded border border-slate-200 px-3 py-1">
-                                      Cancelar remoção
-                                    </button>
-                                  </>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-                  </div>
-                </div>
-                <aside className="space-y-6 lg:col-span-4">
-                  <div className={`${panelClass} p-6`}>
-                    <h3 className="mb-4 text-h3 text-primary">Enrollment Distribution</h3>
-                    <div className="space-y-3 text-body-sm">
-                      <div><p className="mb-1 flex justify-between"><span>Grade 10</span><span className="font-bold text-primary">42%</span></p><div className="h-2 rounded-full bg-surface-container"><div className="h-full w-[42%] rounded-full bg-primary" /></div></div>
-                      <div><p className="mb-1 flex justify-between"><span>Grade 11</span><span className="font-bold text-primary">35%</span></p><div className="h-2 rounded-full bg-surface-container"><div className="h-full w-[35%] rounded-full bg-primary-container" /></div></div>
-                      <div><p className="mb-1 flex justify-between"><span>Grade 12</span><span className="font-bold text-primary">23%</span></p><div className="h-2 rounded-full bg-surface-container"><div className="h-full w-[23%] rounded-full bg-secondary" /></div></div>
-                    </div>
-                  </div>
-                  <div className="rounded-xl bg-primary p-6 text-on-primary shadow-lg">
-                    <h3 className="mb-2 text-h3">Academic Insights</h3>
-                    <p className="mb-5 text-body-sm text-on-primary-container">12 estudantes precisam de reforço em matemática.</p>
-                    <button type="button" className="w-full rounded-lg bg-surface-container-lowest py-3 font-bold text-primary">View Intervention Report</button>
-                  </div>
-                </aside>
-              </div>
-            </section>
+            <StudentsRoute
+              panelClass={panelClass}
+              tableHeaderClass={tableHeaderClass}
+              tableCellClass={tableCellClass}
+              students={students}
+              studentForm={studentForm}
+              loading={loading}
+              editingStudentId={editingStudentId}
+              pendingDeleteStudentId={pendingDeleteStudentId}
+              onSubmit={handleStudentSubmit}
+              onStudentFormChange={(field, value) => setStudentForm((c) => ({ ...c, [field]: value }))}
+              onCancelEdit={cancelEditStudent}
+              onStartEdit={startEditStudent}
+              onRequestDelete={requestDeleteStudent}
+              onConfirmDelete={(student) => {
+                void confirmDeleteStudent(student);
+              }}
+              onCancelDelete={cancelDeleteStudent}
+            />
           )}
 
           {view.type === "classes" && (
-            <section className="space-y-lg">
-              <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-                <div>
-                  <h1 className="text-h1 text-primary">Gerenciamento de turmas</h1>
-                  <p className="font-body-md text-secondary">Schedule and monitor institutional curriculum delivery.</p>
-                </div>
-                <div className="flex rounded-lg border border-outline-variant bg-surface-container p-1">
-                  <button type="button" className="flex items-center space-x-2 rounded-md bg-white px-4 py-2 font-bold text-primary shadow-sm">
-                    <span className="material-symbols-outlined text-[20px]">list</span>
-                    <span className="text-body-sm">List View</span>
-                  </button>
-                  <button type="button" className="flex items-center space-x-2 rounded-md px-4 py-2 font-medium text-secondary">
-                    <span className="material-symbols-outlined text-[20px]">calendar_view_day</span>
-                    <span className="text-body-sm">Calendar View</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-gutter md:grid-cols-4">
-                <div className="flex items-center space-x-4 rounded-xl border border-outline-variant bg-surface-container-lowest p-md">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary-container text-primary">
-                    <span className="material-symbols-outlined">school</span>
-                  </div>
-                  <div>
-                    <p className="text-label-caps uppercase text-secondary">Total Classes</p>
-                    <p className="text-h2 text-primary">{classes.length}</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-4 rounded-xl border border-outline-variant bg-surface-container-lowest p-md">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-tertiary-fixed-dim/20 text-on-tertiary-fixed-variant">
-                    <span className="material-symbols-outlined">person_add</span>
-                  </div>
-                  <div>
-                    <p className="text-label-caps uppercase text-secondary">Enrollments</p>
-                    <p className="text-h2 text-primary">{classes.reduce((acc, cls) => acc + cls.studentIds.length, 0)}</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-4 rounded-xl border border-outline-variant bg-surface-container-lowest p-md">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-fixed/30 text-primary-container">
-                    <span className="material-symbols-outlined">meeting_room</span>
-                  </div>
-                  <div>
-                    <p className="text-label-caps uppercase text-secondary">Rooms Active</p>
-                    <p className="text-h2 text-primary">{Math.max(0, classes.length - 1)}</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-4 rounded-xl border border-outline-variant bg-surface-container-lowest p-md">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-error-container/20 text-error">
-                    <span className="material-symbols-outlined">warning</span>
-                  </div>
-                  <div>
-                    <p className="text-label-caps uppercase text-secondary">At Capacity</p>
-                    <p className="text-h2 text-primary">{classes.filter((c) => c.studentIds.length >= 40).length}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-12 gap-gutter">
-                <div className="col-span-12 space-y-md lg:col-span-3">
-                  <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-md">
-                    <h3 className="mb-md text-h3 text-primary">Cadastro de turma</h3>
-                    <form className="space-y-4" onSubmit={handleClassSubmit}>
-                      <div>
-                        <label htmlFor="topic" className="mb-2 block text-label-caps text-secondary">TÓPICO</label>
-                        <input
-                          id="topic"
-                          name="topic"
-                          className="w-full rounded-lg border border-outline-variant bg-background px-3 py-2 text-body-sm"
-                          value={classForm.topic}
-                          onChange={(e) => setClassForm((c) => ({ ...c, topic: e.target.value }))}
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="year" className="mb-2 block text-label-caps text-secondary">ANO</label>
-                        <input
-                          id="year"
-                          name="year"
-                          type="number"
-                          className="w-full rounded-lg border border-outline-variant bg-background px-3 py-2 text-body-sm"
-                          value={classForm.year}
-                          onChange={(e) => setClassForm((c) => ({ ...c, year: e.target.value }))}
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="semester" className="mb-2 block text-label-caps text-secondary">SEMESTRE</label>
-                        <select
-                          id="semester"
-                          name="semester"
-                          className="w-full rounded-lg border border-outline-variant bg-background px-3 py-2 text-body-sm"
-                          value={classForm.semester}
-                          onChange={(e) => setClassForm((c) => ({ ...c, semester: e.target.value }))}
-                        >
-                          <option value="">Selecione</option>
-                          <option value="1">1</option>
-                          <option value="2">2</option>
-                        </select>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <button type="submit" disabled={loading} className="rounded-lg bg-primary px-4 py-2 font-bold text-white">
-                          {loading ? "Salvando..." : editingClassId ? "Salvar edição" : "Cadastrar turma"}
-                        </button>
-                        {editingClassId && (
-                          <button type="button" onClick={cancelEditClass} className="rounded-lg border border-outline-variant px-4 py-2">
-                            Cancelar edição
-                          </button>
-                        )}
-                      </div>
-                    </form>
-                  </div>
-                </div>
-
-                <div className="col-span-12 lg:col-span-9">
-                  <div className="overflow-hidden rounded-xl border border-outline-variant bg-white shadow-sm">
-                    <table className="w-full border-collapse text-left">
-                      <thead>
-                        <tr className="border-b border-outline-variant bg-slate-50">
-                          <th className="px-md py-4 text-left text-xs font-label-caps uppercase tracking-wider text-secondary">Class Name</th>
-                          <th className="px-md py-4 text-left text-xs font-label-caps uppercase tracking-wider text-secondary">Room / Time</th>
-                          <th className="px-md py-4 text-left text-xs font-label-caps uppercase tracking-wider text-secondary">Enrollment</th>
-                          <th className="px-md py-4 text-right text-xs font-label-caps uppercase tracking-wider text-secondary">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {classesWithMeta.length === 0 ? (
-                          <tr>
-                            <td className="px-6 py-6 text-secondary" colSpan={4}>Nenhuma turma cadastrada.</td>
-                          </tr>
-                        ) : (
-                          classesWithMeta.map((cls) => (
-                            <tr key={cls.id} className="transition-colors hover:bg-slate-50">
-                              <td className="px-md py-4">
-                                <p className="text-body-md font-bold text-primary">{cls.topic}</p>
-                                <p className="text-xs text-secondary">{cls.year} • Semestre {cls.semester}</p>
-                              </td>
-                              <td className="px-md py-4 text-body-sm text-secondary">
-                                <p>{cls.room}</p>
-                                <p>Seg, Qua 10:00 AM</p>
-                              </td>
-                              <td className="px-md py-4">
-                                <div className="flex w-32 flex-col">
-                                  <div className="mb-1 flex justify-between text-xs">
-                                    <span className="font-medium">{cls.studentIds.length}/45</span>
-                                    <span className="text-secondary">{cls.occupancy}%</span>
-                                  </div>
-                                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-                                    <div className="h-full rounded-full bg-on-tertiary-container" style={{ width: `${cls.occupancy}%` }} />
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-md py-4">
-                                <div className="flex justify-end gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => navigateTo({ type: "classDetail", classId: cls.id })}
-                                    className="rounded border border-outline-variant px-3 py-1 text-body-sm hover:border-primary"
-                                  >
-                                    Ver turma
-                                  </button>
-                                  <button type="button" onClick={() => startEditClass(cls)} className="rounded border border-outline-variant px-3 py-1 text-body-sm hover:border-primary">
-                                    Editar
-                                  </button>
-                                  <button type="button" onClick={() => requestDeleteClass(cls)} className="rounded border border-outline-variant px-3 py-1 text-body-sm hover:border-primary">
-                                    Remover
-                                  </button>
-                                  {pendingDeleteClassId === cls.id && (
-                                    <>
-                                      <button type="button" onClick={() => confirmDeleteClass(cls)} className="rounded border border-outline-variant px-3 py-1 text-body-sm">
-                                        Confirmar remoção
-                                      </button>
-                                      <button type="button" onClick={cancelDeleteClass} className="rounded border border-outline-variant px-3 py-1 text-body-sm">
-                                        Cancelar remoção
-                                      </button>
-                                    </>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            </section>
+            <ClassesRoute
+              classesWithMeta={classesWithMeta}
+              classes={classes}
+              classForm={classForm}
+              editingClassId={editingClassId}
+              pendingDeleteClassId={pendingDeleteClassId}
+              loading={loading}
+              onSubmit={handleClassSubmit}
+              onClassFormChange={(field, value) => setClassForm((c) => ({ ...c, [field]: value }))}
+              onCancelEdit={cancelEditClass}
+              onNavigateToDetail={(classId) => navigateTo({ type: "classDetail", classId })}
+              onStartEdit={startEditClass}
+              onRequestDelete={requestDeleteClass}
+              onConfirmDelete={(cls) => {
+                void confirmDeleteClass(cls);
+              }}
+              onCancelDelete={cancelDeleteClass}
+            />
           )}
 
           {view.type === "classDetail" && classDetail && (
-            <section className="space-y-8">
-              <div className="flex flex-wrap items-end justify-between gap-4">
-                <div>
-                  <h1 className="text-h1 text-primary">Detalhe da turma</h1>
-                  <p className="text-body-md text-secondary">Grading & Evaluations</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <select className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-body-md">
-                    <option>Final Examination</option>
-                    <option>Mid-term Project</option>
-                  </select>
-                  <button type="button" className="rounded-lg bg-primary px-6 py-2.5 text-on-primary">Aplicar alterações</button>
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <button type="button" onClick={() => navigateTo({ type: "classes" })} className="rounded-lg border border-slate-200 px-4 py-2 hover:border-primary">
-                  Voltar para turmas
-                </button>
-              </div>
-              <h1 className="text-h2 text-primary">
-                {classDetail.topic} — {classDetail.year}/{classDetail.semester}
-              </h1>
-              <div className="grid gap-6 lg:grid-cols-12">
-                <div className="lg:col-span-8">
-                  <div className={`${panelClass} p-6`}>
-                    <h3 className="mb-4 text-h3 text-primary">Grade Distribution</h3>
-                    <div className="flex h-40 items-end justify-between gap-3">
-                      {[15, 25, 65, 85, 45].map((value, idx) => (
-                        <div key={`${value}-${idx}`} className="flex flex-1 flex-col items-center gap-2">
-                          <div className="w-full rounded-t-lg bg-slate-200" style={{ height: `${value}%` }} />
-                          <span className="text-label-caps text-secondary">{["F", "D", "C", "B", "A"][idx]}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-6 lg:col-span-4">
-                  <div className="rounded-xl bg-primary-container p-6 text-on-primary">
-                    <p className="text-label-caps text-on-primary-container">Class Average</p>
-                    <p className="text-4xl font-bold">84.2%</p>
-                  </div>
-                  <div className={`${panelClass} p-6`}>
-                    <p className="text-label-caps text-secondary">Pending Entry</p>
-                    <p className="text-4xl font-bold text-primary">06</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className={`${panelClass} p-6`}>
-                <h2 className="mb-4 text-h3 text-primary">Alunos matriculados</h2>
-                {classDetail.students.length === 0 ? (
-                  <p>Nenhum aluno matriculado.</p>
-                ) : (
-                  <ul className="space-y-2">
-                    {classDetail.students.map((s) => (
-                      <li key={s.id} className="flex items-center justify-between rounded-lg border border-slate-200 px-4 py-2">
-                        <span>{s.name}</span>
-                        <button type="button" onClick={() => handleUnenroll(s.id)} className="rounded border border-slate-200 px-3 py-1">
-                          Desmatricular
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                {students.filter((s) => !classDetail.studentIds.includes(s.id)).length > 0 && (
-                  <div className="mt-4">
-                    <label htmlFor="enroll-select" className="mb-1 block text-sm font-medium">Matricular aluno</label>
-                    <select
-                      id="enroll-select"
-                      defaultValue=""
-                      className="w-full max-w-xs rounded-lg border border-slate-200 px-3 py-2"
-                      onChange={(e) => {
-                        if (e.target.value) void handleEnroll(e.target.value);
-                        e.target.value = "";
-                      }}
-                    >
-                      <option value="">Selecione um aluno</option>
-                      {students
-                        .filter((s) => !classDetail.studentIds.includes(s.id))
-                        .map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.name}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-
-              <div className={`${panelClass} overflow-hidden`}>
-                <h2 className="border-b border-slate-200 px-6 py-4 text-h3 text-primary">Avaliações</h2>
-                {classDetail.students.length === 0 ? (
-                  <p className="px-6 py-6">Matricule alunos para registrar avaliações.</p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left font-data-table">
-                      <thead className="bg-slate-50/60">
-                        <tr>
-                          <th className={tableHeaderClass}>Aluno</th>
-                          {METAS.map((meta) => (
-                            <th key={meta} className={tableHeaderClass}>{meta}</th>
-                          ))}
-                          <th className={tableHeaderClass}>Ações</th>
-                          <th className={tableHeaderClass}>Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {classDetail.students.map((student, idx) => (
-                          <tr key={student.id} className={`border-t border-slate-100 hover:bg-slate-50 ${idx % 2 ? "bg-slate-50/50" : ""}`}>
-                            <td className={tableCellClass}>{student.name}</td>
-                            {METAS.map((meta) => (
-                              <td key={meta} className={tableCellClass}>
-                                <select
-                                  aria-label={`${meta} de ${student.name}`}
-                                  value={getGradeValue(student.id, meta)}
-                                  className="w-full min-w-28 rounded-lg border border-slate-200 bg-white px-2 py-1"
-                                  onChange={(e) => handleGradeEdit(student.id, meta, e.target.value)}
-                                >
-                                  <option value="">—</option>
-                                  {GRADE_CONCEPTS.map((c) => (
-                                    <option key={c} value={c}>
-                                      {c}
-                                    </option>
-                                  ))}
-                                </select>
-                              </td>
-                            ))}
-                            <td className={tableCellClass}>
-                              <button
-                                type="button"
-                                disabled={loading}
-                                onClick={() => handleSaveStudentGrades(student.id)}
-                                className="rounded border border-slate-200 px-3 py-1 hover:border-primary"
-                              >
-                                Salvar
-                              </button>
-                            </td>
-                            <td className={tableCellClass}>
-                              <span className="rounded-full bg-tertiary-fixed/40 px-2 py-1 text-[11px] font-bold uppercase text-on-tertiary-fixed-variant">
-                                Saved
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </section>
+            <ClassDetailRoute
+              panelClass={panelClass}
+              tableHeaderClass={tableHeaderClass}
+              tableCellClass={tableCellClass}
+              classDetail={classDetail}
+              students={students}
+              loading={loading}
+              metas={METAS}
+              gradeConcepts={GRADE_CONCEPTS}
+              getGradeValue={getGradeValue}
+              onBackToClasses={() => navigateTo({ type: "classes" })}
+              onEnroll={(studentId) => {
+                void handleEnroll(studentId);
+              }}
+              onUnenroll={(studentId) => {
+                void handleUnenroll(studentId);
+              }}
+              onGradeEdit={handleGradeEdit}
+              onSaveStudentGrades={(studentId) => {
+                void handleSaveStudentGrades(studentId);
+              }}
+            />
           )}
         </main>
       </div>
