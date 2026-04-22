@@ -66,6 +66,11 @@ export class GradeStore {
     return payload.grades.filter((g) => g.classId === classId);
   }
 
+  async getAll(): Promise<Grade[]> {
+    const payload = await this.readGradesFile();
+    return payload.grades;
+  }
+
   async setGrade(input: {
     studentId: string;
     classId: string;

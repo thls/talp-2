@@ -53,6 +53,20 @@ export function buildApp(options: BuildAppOptions = {}): {
 
   app.get("/health", async () => ({ status: "ok" }));
 
+  app.get("/stats", async () => {
+    const [students, classes, grades] = await Promise.all([
+      studentStore.list(),
+      classStore.list(),
+      gradeStore.getAll()
+    ]);
+
+    return {
+      studentCount: students.length,
+      classCount: classes.length,
+      gradeCount: grades.length
+    };
+  });
+
   // ─── Students ─────────────────────────────────────────────────────────────
 
   app.get("/students", async () => {
