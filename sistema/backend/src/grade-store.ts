@@ -134,6 +134,38 @@ export class GradeStore {
     await this.writeGradesFile(payload);
   }
 
+  async removeForClass(classId: string): Promise<void> {
+    const payload = await this.readGradesFile();
+    payload.grades = payload.grades.filter((g) => g.classId !== classId);
+    payload.changes = payload.changes.filter((c) => c.classId !== classId);
+    await this.writeGradesFile(payload);
+  }
+
+  async removeGrade(input: { classId: string; studentId: string; meta: string }): Promise<void> {
+    const payload = await this.readGradesFile();
+    const nextGrades = payload.grades.filter(
+      (grade) =>
+        !(
+          grade.classId === input.classId &&
+          grade.studentId === input.studentId &&
+          grade.meta === input.meta
+        )
+    );
+    if (nextGrades.length === payload.grades.length) {
+      throw new Error("GRADE_NOT_FOUND");
+    }
+    payload.grades = nextGrades;
+    payload.changes = payload.changes.filter(
+      (change) =>
+        !(
+          change.classId === input.classId &&
+          change.studentId === input.studentId &&
+          change.meta === input.meta
+        )
+    );
+    await this.writeGradesFile(payload);
+  }
+
   private async readGradesFile(): Promise<GradesFile> {
     try {
       const raw = await readFile(this.filePath, "utf-8");

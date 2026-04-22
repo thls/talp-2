@@ -47,7 +47,12 @@ export function buildApp(options: BuildAppOptions = {}): {
     options.sendMail ?? noopSendMail
   );
 
-  void app.register(cors, { origin: true });
+  void app.register(cors, {
+    origin: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true
+  });
 
   // ─── Health ───────────────────────────────────────────────────────────────
 
@@ -268,6 +273,7 @@ export function buildApp(options: BuildAppOptions = {}): {
     const { id = "" } = request.params as { id?: string };
     try {
       await classStore.remove(id);
+      await gradeStore.removeForClass(id);
       return reply.status(204).send();
     } catch (error) {
       if ((error as Error).message === "CLASS_NOT_FOUND")
@@ -354,6 +360,26 @@ export function buildApp(options: BuildAppOptions = {}): {
       concept: concept as "MANA" | "MPA" | "MA"
     });
     return reply.status(200).send(grade);
+  });
+
+  app.delete("/classes/:classId/grades/:studentId/:meta", async (request, reply) => {
+    const { classId = "", studentId = "", meta = "" } = request.params as {
+      classId?: string;
+      studentId?: string;
+      meta?: string;
+    };
+    const cls = await classStore.getById(classId);
+    if (!cls) return reply.status(404).send({ message: "Turma não encontrada." });
+
+    try {
+      await gradeStore.removeGrade({ classId, studentId, meta });
+      return reply.status(204).send();
+    } catch (error) {
+      if ((error as Error).message === "GRADE_NOT_FOUND") {
+        return reply.status(404).send({ message: "Avaliação não encontrada." });
+      }
+      throw error;
+    }
   });
 
   // ─── Notifications ────────────────────────────────────────────────────────
