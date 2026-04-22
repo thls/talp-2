@@ -36,6 +36,8 @@ function toApiCpf(cpf: string): string {
 export function App() {
   const [students, setStudents] = useState<Student[]>([]);
   const [form, setForm] = useState<FormValues>(initialFormValues);
+  const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
+  const [pendingDeleteStudentId, setPendingDeleteStudentId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -80,8 +82,14 @@ export function App() {
 
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/students`, {
-        method: "POST",
+      const isEditing = Boolean(editingStudentId);
+      const targetUrl = isEditing
+        ? `${API_URL}/students/${editingStudentId}`
+        : `${API_URL}/students`;
+      const method = isEditing ? "PUT" : "POST";
+
+      const response = await fetch(targetUrl, {
+        method,
         headers: {
           "Content-Type": "application/json"
         },
@@ -94,14 +102,29 @@ export function App() {
 
       if (!response.ok) {
         const data = (await response.json()) as { message?: string };
-        setError(data.message ?? "Não foi possível cadastrar o aluno.");
+        setError(
+          data.message ??
+            (isEditing
+              ? "Não foi possível atualizar o aluno."
+              : "Não foi possível cadastrar o aluno.")
+        );
         return;
       }
 
-      const createdStudent = (await response.json()) as Student;
-      setStudents((current) => [...current, createdStudent]);
+      const savedStudent = (await response.json()) as Student;
+      if (isEditing) {
+        setStudents((current) =>
+          current.map((student) =>
+            student.id === savedStudent.id ? savedStudent : student
+          )
+        );
+      } else {
+        setStudents((current) => [...current, savedStudent]);
+      }
+
       setForm(initialFormValues);
-      setSuccess("Aluno cadastrado com sucesso.");
+      setEditingStudentId(null);
+      setSuccess(isEditing ? "Aluno atualizado com sucesso." : "Aluno cadastrado com sucesso.");
     } catch {
       setError("Erro de comunicação com o servidor.");
     } finally {
@@ -109,9 +132,60 @@ export function App() {
     }
   }
 
+  function startEdit(student: Student) {
+    setError(null);
+    setSuccess(null);
+    setEditingStudentId(student.id);
+    setForm({
+      name: student.name,
+      cpf: student.cpf,
+      email: student.email
+    });
+  }
+
+  function cancelEdit() {
+    setEditingStudentId(null);
+    setForm(initialFormValues);
+    setError(null);
+    setSuccess(null);
+  }
+
+  function requestDelete(student: Student) {
+    setError(null);
+    setSuccess(null);
+    setPendingDeleteStudentId(student.id);
+  }
+
+  function cancelDelete() {
+    setPendingDeleteStudentId(null);
+  }
+
+  async function confirmDelete(student: Student) {
+    try {
+      const response = await fetch(`${API_URL}/students/${student.id}`, {
+        method: "DELETE"
+      });
+
+      if (!response.ok) {
+        const data = (await response.json()) as { message?: string };
+        setError(data.message ?? "Não foi possível remover o aluno.");
+        return;
+      }
+
+      setStudents((current) => current.filter((currentStudent) => currentStudent.id !== student.id));
+      if (editingStudentId === student.id) {
+        cancelEdit();
+      }
+      setPendingDeleteStudentId(null);
+      setSuccess("Aluno removido com sucesso.");
+    } catch {
+      setError("Erro de comunicação com o servidor.");
+    }
+  }
+
   return (
     <main>
-      <h1>Cadastro de alunos</h1>
+      <h1>Gerenciamento de alunos</h1>
       <form onSubmit={handleSubmit}>
         <div>
           <label htmlFor="name">Nome</label>
@@ -150,8 +224,17 @@ export function App() {
         </div>
 
         <button type="submit" disabled={loading}>
-          {loading ? "Salvando..." : "Cadastrar aluno"}
+          {loading
+            ? "Salvando..."
+            : editingStudentId
+              ? "Salvar edição"
+              : "Cadastrar aluno"}
         </button>
+        {editingStudentId && (
+          <button type="button" onClick={cancelEdit}>
+            Cancelar edição
+          </button>
+        )}
       </form>
 
       {error && <p role="alert">{error}</p>}
@@ -167,6 +250,7 @@ export function App() {
               <th>Nome</th>
               <th>CPF</th>
               <th>Email</th>
+              <th>Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -175,6 +259,24 @@ export function App() {
                 <td>{student.name}</td>
                 <td>{student.cpf}</td>
                 <td>{student.email}</td>
+                <td>
+                  <button type="button" onClick={() => startEdit(student)}>
+                    Editar
+                  </button>
+                  <button type="button" onClick={() => requestDelete(student)}>
+                    Remover
+                  </button>
+                  {pendingDeleteStudentId === student.id && (
+                    <>
+                      <button type="button" onClick={() => confirmDelete(student)}>
+                        Confirmar remoção
+                      </button>
+                      <button type="button" onClick={cancelDelete}>
+                        Cancelar remoção
+                      </button>
+                    </>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
