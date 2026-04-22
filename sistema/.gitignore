@@ -3,3 +3,5 @@ dist
 coverage
 .DS_Store
 backend/data/students.json
+backend/data/classes.json
+backend/data/grades.json
