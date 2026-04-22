@@ -166,3 +166,182 @@ describe("POST /students", () => {
     await app.close();
   });
 });
+
+describe("PUT /students/:id", () => {
+  async function createAppWithTempStore() {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), "students-test-"));
+    const app = buildApp({
+      studentsFilePath: path.join(tempDir, "students.json")
+    });
+    return { app };
+  }
+
+  it("atualiza aluno com dados válidos", async () => {
+    const { app } = await createAppWithTempStore();
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/students",
+      payload: {
+        name: "Ana",
+        cpf: "12345678901",
+        email: "ana@example.com"
+      }
+    });
+    const studentId = created.json().id as string;
+
+    const updateResponse = await app.inject({
+      method: "PUT",
+      url: `/students/${studentId}`,
+      payload: {
+        name: "Ana Souza",
+        cpf: "12345678901",
+        email: "ana.souza@example.com"
+      }
+    });
+
+    expect(updateResponse.statusCode).toBe(200);
+    expect(updateResponse.json()).toMatchObject({
+      id: studentId,
+      name: "Ana Souza",
+      cpf: "12345678901",
+      email: "ana.souza@example.com"
+    });
+
+    const listResponse = await app.inject({
+      method: "GET",
+      url: "/students"
+    });
+    expect(listResponse.json().students[0]).toMatchObject({
+      id: studentId,
+      name: "Ana Souza",
+      email: "ana.souza@example.com"
+    });
+
+    await app.close();
+  });
+
+  it("bloqueia edição com CPF de outro aluno", async () => {
+    const { app } = await createAppWithTempStore();
+
+    const first = await app.inject({
+      method: "POST",
+      url: "/students",
+      payload: {
+        name: "Aluno 1",
+        cpf: "11111111111",
+        email: "aluno1@example.com"
+      }
+    });
+    const second = await app.inject({
+      method: "POST",
+      url: "/students",
+      payload: {
+        name: "Aluno 2",
+        cpf: "22222222222",
+        email: "aluno2@example.com"
+      }
+    });
+    const secondId = second.json().id as string;
+
+    const response = await app.inject({
+      method: "PUT",
+      url: `/students/${secondId}`,
+      payload: {
+        name: "Aluno 2",
+        cpf: first.json().cpf,
+        email: "aluno2@example.com"
+      }
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toEqual({
+      message: "CPF já cadastrado."
+    });
+
+    await app.close();
+  });
+
+  it("retorna 404 ao editar aluno inexistente", async () => {
+    const { app } = await createAppWithTempStore();
+
+    const response = await app.inject({
+      method: "PUT",
+      url: "/students/nao-existe",
+      payload: {
+        name: "Ana",
+        cpf: "12345678901",
+        email: "ana@example.com"
+      }
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toEqual({
+      message: "Aluno não encontrado."
+    });
+
+    await app.close();
+  });
+});
+
+describe("DELETE /students/:id", () => {
+  async function createAppWithTempStore() {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), "students-test-"));
+    const app = buildApp({
+      studentsFilePath: path.join(tempDir, "students.json")
+    });
+    return { app };
+  }
+
+  it("remove aluno existente e some da lista", async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), "students-test-"));
+    const filePath = path.join(tempDir, "students.json");
+    const app = buildApp({
+      studentsFilePath: filePath
+    });
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/students",
+      payload: {
+        name: "Aluno",
+        cpf: "99988877766",
+        email: "aluno@example.com"
+      }
+    });
+    const id = created.json().id as string;
+
+    const removeResponse = await app.inject({
+      method: "DELETE",
+      url: `/students/${id}`
+    });
+    expect(removeResponse.statusCode).toBe(204);
+
+    const listResponse = await app.inject({
+      method: "GET",
+      url: "/students"
+    });
+    expect(listResponse.json().students).toHaveLength(0);
+
+    const fileContent = await readFile(filePath, "utf-8");
+    const parsed = JSON.parse(fileContent);
+    expect(parsed.students).toHaveLength(0);
+
+    await app.close();
+  });
+
+  it("retorna 404 ao remover aluno inexistente", async () => {
+    const { app } = await createAppWithTempStore();
+
+    const removeResponse = await app.inject({
+      method: "DELETE",
+      url: "/students/nao-existe"
+    });
+    expect(removeResponse.statusCode).toBe(404);
+    expect(removeResponse.json()).toEqual({
+      message: "Aluno não encontrado."
+    });
+
+    await app.close();
+  });
+});
