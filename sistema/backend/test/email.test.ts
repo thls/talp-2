@@ -236,4 +236,50 @@ describe("POST /notifications/daily (via HTTP)", () => {
     expect(res.statusCode).toBe(200);
     await app.close();
   });
+
+  it("lista notificações persistidas em GET /notifications", async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), "notif-list-test-"));
+    const sendMail = vi.fn().mockResolvedValue(undefined);
+    const { buildApp } = await import("../src/app.js");
+    const { app } = buildApp({
+      studentsFilePath: path.join(tempDir, "students.json"),
+      classesFilePath: path.join(tempDir, "classes.json"),
+      gradesFilePath: path.join(tempDir, "grades.json"),
+      emailLogsFilePath: path.join(tempDir, "email-logs.json"),
+      sendMail
+    });
+
+    const student = await app.inject({
+      method: "POST",
+      url: "/students",
+      payload: { name: "Ana", cpf: "12345678901", email: "ana@example.com" }
+    });
+    const classRes = await app.inject({
+      method: "POST",
+      url: "/classes",
+      payload: { topic: "ES", year: 2026, semester: 1, capacity: 40 }
+    });
+    const studentId = (student.json() as { id: string }).id;
+    const classId = (classRes.json() as { id: string }).id;
+    await app.inject({
+      method: "POST",
+      url: `/classes/${classId}/students`,
+      payload: { studentId }
+    });
+    await app.inject({
+      method: "PUT",
+      url: `/classes/${classId}/grades/${studentId}/Requisitos`,
+      payload: { concept: "MANA" }
+    });
+    await app.inject({
+      method: "POST",
+      url: "/notifications/daily",
+      payload: { date: TODAY }
+    });
+
+    const list = await app.inject({ method: "GET", url: "/notifications" });
+    expect(list.statusCode).toBe(200);
+    expect(list.json().notifications.length).toBeGreaterThan(0);
+    await app.close();
+  });
 });

@@ -26,7 +26,7 @@ async function createStudent(app: Awaited<ReturnType<typeof createAppWithTempSto
 
 async function createClass(
   app: Awaited<ReturnType<typeof createAppWithTempStore>>["app"],
-  overrides: { topic?: string; year?: number; semester?: number } = {}
+  overrides: { topic?: string; year?: number; semester?: number; capacity?: number } = {}
 ) {
   const res = await app.inject({
     method: "POST",
@@ -34,10 +34,18 @@ async function createClass(
     payload: {
       topic: overrides.topic ?? "Engenharia de Software",
       year: overrides.year ?? 2026,
-      semester: overrides.semester ?? 1
+      semester: overrides.semester ?? 1,
+      capacity: overrides.capacity ?? 40
     }
   });
-  return res.json() as { id: string; topic: string; year: number; semester: number; studentIds: string[] };
+  return res.json() as {
+    id: string;
+    topic: string;
+    year: number;
+    semester: number;
+    capacity: number;
+    studentIds: string[];
+  };
 }
 
 describe("GET /classes", () => {
@@ -64,13 +72,14 @@ describe("POST /classes", () => {
     const res = await app.inject({
       method: "POST",
       url: "/classes",
-      payload: { topic: "Requisitos", year: 2026, semester: 1 }
+      payload: { topic: "Requisitos", year: 2026, semester: 1, capacity: 40 }
     });
     expect(res.statusCode).toBe(201);
     expect(res.json()).toMatchObject({
       topic: "Requisitos",
       year: 2026,
       semester: 1,
+      capacity: 40,
       studentIds: []
     });
     await app.close();
@@ -82,7 +91,7 @@ describe("POST /classes", () => {
     const dup = await app.inject({
       method: "POST",
       url: "/classes",
-      payload: { topic: "ES", year: 2026, semester: 1 }
+      payload: { topic: "ES", year: 2026, semester: 1, capacity: 40 }
     });
     expect(dup.statusCode).toBe(409);
     expect(dup.json().message).toMatch(/tópico/i);
@@ -95,7 +104,7 @@ describe("POST /classes", () => {
     const res = await app.inject({
       method: "POST",
       url: "/classes",
-      payload: { topic: "ES", year: 2026, semester: 2 }
+      payload: { topic: "ES", year: 2026, semester: 2, capacity: 40 }
     });
     expect(res.statusCode).toBe(201);
     await app.close();
@@ -117,7 +126,7 @@ describe("POST /classes", () => {
     const res = await app.inject({
       method: "POST",
       url: "/classes",
-      payload: { topic: "ES", year: 2026, semester: 3 }
+      payload: { topic: "ES", year: 2026, semester: 3, capacity: 40 }
     });
     expect(res.statusCode).toBe(400);
     expect(res.json().message).toMatch(/semestre/i);
@@ -148,11 +157,11 @@ describe("PUT /classes/:id", () => {
     const update = await app.inject({
       method: "PUT",
       url: `/classes/${cls.id}`,
-      payload: { topic: "Testes", year: 2027, semester: 2 }
+      payload: { topic: "Testes", year: 2027, semester: 2, capacity: 40 }
     });
 
     expect(update.statusCode).toBe(200);
-    expect(update.json()).toMatchObject({ topic: "Testes", year: 2027, semester: 2 });
+    expect(update.json()).toMatchObject({ topic: "Testes", year: 2027, semester: 2, capacity: 40 });
     expect((update.json() as { studentIds: string[] }).studentIds).toContain(student.id);
     await app.close();
   });
@@ -165,7 +174,7 @@ describe("PUT /classes/:id", () => {
     const res = await app.inject({
       method: "PUT",
       url: `/classes/${cls2.id}`,
-      payload: { topic: "ES", year: 2026, semester: 1 }
+      payload: { topic: "ES", year: 2026, semester: 1, capacity: 40 }
     });
     expect(res.statusCode).toBe(409);
     await app.close();
@@ -176,7 +185,7 @@ describe("PUT /classes/:id", () => {
     const res = await app.inject({
       method: "PUT",
       url: "/classes/nao-existe",
-      payload: { topic: "ES", year: 2026, semester: 1 }
+      payload: { topic: "ES", year: 2026, semester: 1, capacity: 40 }
     });
     expect(res.statusCode).toBe(404);
     await app.close();
@@ -321,6 +330,34 @@ describe("POST /classes/:classId/students (matrícula)", () => {
       payload: { studentId: "nao-existe" }
     });
     expect(res.statusCode).toBe(404);
+    await app.close();
+  });
+
+  it("bloqueia matrícula quando turma atinge capacidade", async () => {
+    const { app } = await createAppWithTempStore();
+    const s1 = await app.inject({
+      method: "POST",
+      url: "/students",
+      payload: { name: "Ana", cpf: "12345678901", email: "ana@example.com" }
+    });
+    const s2 = await app.inject({
+      method: "POST",
+      url: "/students",
+      payload: { name: "Bruno", cpf: "12345678902", email: "bruno@example.com" }
+    });
+    const cls = await createClass(app, { capacity: 1 });
+    await app.inject({
+      method: "POST",
+      url: `/classes/${cls.id}/students`,
+      payload: { studentId: (s1.json() as { id: string }).id }
+    });
+    const full = await app.inject({
+      method: "POST",
+      url: `/classes/${cls.id}/students`,
+      payload: { studentId: (s2.json() as { id: string }).id }
+    });
+    expect(full.statusCode).toBe(409);
+    expect(full.json().message).toMatch(/capacidade/i);
     await app.close();
   });
 });

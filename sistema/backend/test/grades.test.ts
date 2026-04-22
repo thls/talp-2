@@ -26,7 +26,7 @@ async function setupClassWithStudent(app: Awaited<ReturnType<typeof createAppWit
   const classRes = await app.inject({
     method: "POST",
     url: "/classes",
-    payload: { topic: "ES", year: 2026, semester: 1 }
+    payload: { topic: "ES", year: 2026, semester: 1, capacity: 40 }
   });
   const classId = (classRes.json() as { id: string }).id;
 
@@ -160,7 +160,7 @@ describe("PUT /classes/:classId/grades/:studentId/:meta", () => {
     const classRes = await app.inject({
       method: "POST",
       url: "/classes",
-      payload: { topic: "ES", year: 2026, semester: 1 }
+      payload: { topic: "ES", year: 2026, semester: 1, capacity: 40 }
     });
     const classId = (classRes.json() as { id: string }).id;
 
@@ -220,12 +220,12 @@ describe("PUT /classes/:classId/grades/:studentId/:meta", () => {
     const c1 = await app.inject({
       method: "POST",
       url: "/classes",
-      payload: { topic: "ES", year: 2026, semester: 1 }
+      payload: { topic: "ES", year: 2026, semester: 1, capacity: 40 }
     });
     const c2 = await app.inject({
       method: "POST",
       url: "/classes",
-      payload: { topic: "ES", year: 2026, semester: 2 }
+      payload: { topic: "ES", year: 2026, semester: 2, capacity: 40 }
     });
     const classId1 = (c1.json() as { id: string }).id;
     const classId2 = (c2.json() as { id: string }).id;

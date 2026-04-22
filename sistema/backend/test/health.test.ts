@@ -25,6 +25,82 @@ describe("GET /health", () => {
   });
 });
 
+describe("Busca e métricas", () => {
+  it("filtra alunos e turmas por termo com query search", async () => {
+    const { app } = await createAppWithTempStore();
+
+    await app.inject({
+      method: "POST",
+      url: "/students",
+      payload: { name: "Ana Paula", cpf: "12345678901", email: "ana@exemplo.com" }
+    });
+    await app.inject({
+      method: "POST",
+      url: "/students",
+      payload: { name: "Bruno", cpf: "12345678902", email: "bruno@exemplo.com" }
+    });
+    await app.inject({
+      method: "POST",
+      url: "/classes",
+      payload: { topic: "Matemática", year: 2026, semester: 1, capacity: 40 }
+    });
+    await app.inject({
+      method: "POST",
+      url: "/classes",
+      payload: { topic: "Física", year: 2026, semester: 2, capacity: 40 }
+    });
+
+    const students = await app.inject({ method: "GET", url: "/students?search=ana%20paula" });
+    const classes = await app.inject({ method: "GET", url: "/classes?search=mat" });
+
+    expect(students.statusCode).toBe(200);
+    expect(students.json().students.some((student: { name: string }) => student.name === "Ana Paula")).toBe(
+      true
+    );
+    expect(classes.statusCode).toBe(200);
+    expect(classes.json().classes.some((cls: { topic: string }) => cls.topic === "Matemática")).toBe(true);
+    await app.close();
+  });
+
+  it("retorna média real das notas em GET /stats", async () => {
+    const { app } = await createAppWithTempStore();
+
+    const student = await app.inject({
+      method: "POST",
+      url: "/students",
+      payload: { name: "Ana", cpf: "12345678901", email: "ana@exemplo.com" }
+    });
+    const studentId = (student.json() as { id: string }).id;
+    const cls = await app.inject({
+      method: "POST",
+      url: "/classes",
+      payload: { topic: "ES", year: 2026, semester: 1, capacity: 40 }
+    });
+    const classId = (cls.json() as { id: string }).id;
+
+    await app.inject({
+      method: "POST",
+      url: `/classes/${classId}/students`,
+      payload: { studentId }
+    });
+    await app.inject({
+      method: "PUT",
+      url: `/classes/${classId}/grades/${studentId}/Requisitos`,
+      payload: { concept: "MANA" }
+    });
+    await app.inject({
+      method: "PUT",
+      url: `/classes/${classId}/grades/${studentId}/Testes`,
+      payload: { concept: "MA" }
+    });
+
+    const stats = await app.inject({ method: "GET", url: "/stats" });
+    expect(stats.statusCode).toBe(200);
+    expect(stats.json().averageGrade).toBe(7);
+    await app.close();
+  });
+});
+
 describe("POST /students", () => {
   it("cadastra aluno válido e lista no GET /students", async () => {
     const { app } = await createAppWithTempStore();
@@ -254,7 +330,7 @@ describe("DELETE /students/:id", () => {
     const classRes = await app.inject({
       method: "POST",
       url: "/classes",
-      payload: { topic: "Engenharia de Software", year: 2026, semester: 1 }
+      payload: { topic: "Engenharia de Software", year: 2026, semester: 1, capacity: 40 }
     });
     const classId = (classRes.json() as { id: string }).id;
 
