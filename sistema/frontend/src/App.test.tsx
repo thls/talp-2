@@ -101,6 +101,7 @@ describe("Tela de alunos", () => {
 
     render(<App />);
     fireEvent.click(await screen.findByRole("button", { name: /remover/i }));
+    expect(screen.getByText(/deseja remover o aluno ana/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /confirmar remoção/i }));
 
     await waitFor(() => {
@@ -126,10 +127,35 @@ describe("Tela de alunos", () => {
 
     render(<App />);
     fireEvent.click(await screen.findByRole("button", { name: /remover/i }));
+    expect(screen.getByRole("heading", { name: /confirmar remoção/i })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /cancelar remoção/i }));
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(screen.getByText("Ana")).toBeInTheDocument();
+  });
+
+  it("filtra alunos por termo digitado", async () => {
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        students: [
+          { id: "1", name: "Ana", cpf: "12345678901", email: "ana@example.com" },
+          { id: "2", name: "Bruno", cpf: "98765432100", email: "bruno@example.com" }
+        ]
+      })
+    });
+
+    render(<App />);
+    await screen.findByRole("heading", { name: /gerenciamento de alunos/i });
+    fireEvent.change(screen.getByPlaceholderText(/filtrar por nome/i), {
+      target: { value: "ana" }
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole("cell", { name: "Ana" })).toBeInTheDocument();
+      expect(screen.queryByRole("cell", { name: "Bruno" })).not.toBeInTheDocument();
+    });
   });
 });
 
@@ -261,6 +287,7 @@ describe("Tela de turmas", () => {
     fireEvent.click(screen.getByRole("button", { name: /turmas/i }));
 
     fireEvent.click(await screen.findByRole("button", { name: /^remover$/i }));
+    expect(screen.getByText(/deseja remover a turma es/i)).toBeInTheDocument();
     fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
     fireEvent.click(screen.getByRole("button", { name: /confirmar remoção/i }));
 
@@ -285,6 +312,7 @@ describe("Tela de turmas", () => {
     fireEvent.click(screen.getByRole("button", { name: /turmas/i }));
 
     fireEvent.click(await screen.findByRole("button", { name: /^remover$/i }));
+    expect(screen.getByRole("heading", { name: /confirmar remoção/i })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /cancelar remoção/i }));
 
     expect(screen.getByText("ES")).toBeInTheDocument();
@@ -336,6 +364,9 @@ describe("Detalhe da turma (alunos e avaliações)", () => {
     expect(screen.getByText("Requisitos")).toBeInTheDocument();
     expect(screen.getByText("Testes")).toBeInTheDocument();
     expect(screen.getByText("Implementação")).toBeInTheDocument();
+    expect(screen.getAllByText("MANA").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("MPA").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("MA").length).toBeGreaterThan(0);
   });
 
   it("exibe estado vazio quando não há alunos matriculados", async () => {
@@ -459,5 +490,23 @@ describe("Detalhe da turma (alunos e avaliações)", () => {
     fireEvent.click(screen.getByRole("button", { name: /voltar para turmas/i }));
 
     await screen.findByRole("heading", { name: /gerenciamento de turmas/i });
+  });
+});
+
+describe("Dashboard", () => {
+  it("renderiza botão de ir para turmas e ícone home no topo", async () => {
+    fetchMock.mockReset();
+    mockStudentList([]);
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ studentCount: 0, classCount: 0, gradeCount: 0, averageGrade: 0 })
+    });
+
+    render(<App />);
+    await screen.findByRole("heading", { name: /gerenciamento de alunos/i });
+    fireEvent.click(screen.getByRole("button", { name: /dashboard/i }));
+
+    expect(await screen.findByRole("button", { name: /ir para turmas/i })).toBeInTheDocument();
+    expect(screen.getAllByText("home").length).toBeGreaterThan(0);
   });
 });
