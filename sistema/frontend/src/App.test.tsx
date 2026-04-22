@@ -169,6 +169,7 @@ describe("Tela de turmas", () => {
         topic: "Engenharia de Software",
         year: 2026,
         semester: 1,
+        capacity: 40,
         studentIds: []
       })
     });
@@ -178,6 +179,7 @@ describe("Tela de turmas", () => {
     });
     fireEvent.change(screen.getByLabelText(/ano/i), { target: { value: "2026" } });
     fireEvent.change(screen.getByLabelText(/semestre/i), { target: { value: "1" } });
+    fireEvent.change(screen.getByLabelText(/capacidade/i), { target: { value: "40" } });
     fireEvent.click(screen.getByRole("button", { name: /cadastrar turma/i }));
 
     await waitFor(() => {
@@ -191,6 +193,7 @@ describe("Tela de turmas", () => {
 
     fireEvent.change(screen.getByLabelText(/ano/i), { target: { value: "2026" } });
     fireEvent.change(screen.getByLabelText(/semestre/i), { target: { value: "1" } });
+    fireEvent.change(screen.getByLabelText(/capacidade/i), { target: { value: "40" } });
     fireEvent.click(screen.getByRole("button", { name: /cadastrar turma/i }));
 
     expect(screen.getByRole("alert")).toHaveTextContent(/tópico/i);
@@ -220,7 +223,7 @@ describe("Tela de turmas", () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        classes: [{ id: "c1", topic: "ES", year: 2026, semester: 1, studentIds: [] }]
+        classes: [{ id: "c1", topic: "ES", year: 2026, semester: 1, capacity: 40, studentIds: [] }]
       })
     });
 
@@ -233,7 +236,7 @@ describe("Tela de turmas", () => {
 
     fetchMock.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ id: "c1", topic: "Testes", year: 2026, semester: 1, studentIds: [] })
+      json: async () => ({ id: "c1", topic: "Testes", year: 2026, semester: 1, capacity: 40, studentIds: [] })
     });
     fireEvent.click(screen.getByRole("button", { name: /salvar edição/i }));
 
@@ -249,7 +252,7 @@ describe("Tela de turmas", () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        classes: [{ id: "c1", topic: "ES", year: 2026, semester: 1, studentIds: [] }]
+        classes: [{ id: "c1", topic: "ES", year: 2026, semester: 1, capacity: 40, studentIds: [] }]
       })
     });
 
@@ -273,7 +276,7 @@ describe("Tela de turmas", () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        classes: [{ id: "c1", topic: "ES", year: 2026, semester: 1, studentIds: [] }]
+        classes: [{ id: "c1", topic: "ES", year: 2026, semester: 1, capacity: 40, studentIds: [] }]
       })
     });
 
@@ -296,6 +299,7 @@ describe("Detalhe da turma (alunos e avaliações)", () => {
     topic: "Engenharia de Software",
     year: 2026,
     semester: 1,
+    capacity: 40,
     studentIds: ["s1"],
     students: [{ id: "s1", name: "Ana", cpf: "12345678901", email: "ana@example.com" }],
     grades: []
@@ -306,7 +310,7 @@ describe("Detalhe da turma (alunos e avaliações)", () => {
     mockStudentList([{ id: "s1", name: "Ana", cpf: "12345678901", email: "ana@example.com" }]);
     fetchMock.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ classes: [{ id: "c1", topic: "Engenharia de Software", year: 2026, semester: 1, studentIds: ["s1"] }] })
+      json: async () => ({ classes: [{ id: "c1", topic: "Engenharia de Software", year: 2026, semester: 1, capacity: 40, studentIds: ["s1"] }] })
     });
     fetchMock.mockResolvedValueOnce({ ok: true, json: async () => classData });
   }
@@ -339,11 +343,11 @@ describe("Detalhe da turma (alunos e avaliações)", () => {
     mockStudentList([]);
     fetchMock.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ classes: [{ id: "c1", topic: "ES", year: 2026, semester: 1, studentIds: [] }] })
+      json: async () => ({ classes: [{ id: "c1", topic: "ES", year: 2026, semester: 1, capacity: 40, studentIds: [] }] })
     });
     fetchMock.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ id: "c1", topic: "ES", year: 2026, semester: 1, studentIds: [], students: [], grades: [] })
+      json: async () => ({ id: "c1", topic: "ES", year: 2026, semester: 1, capacity: 40, studentIds: [], students: [], grades: [] })
     });
 
     render(<App />);
@@ -387,7 +391,7 @@ describe("Detalhe da turma (alunos e avaliações)", () => {
     mockStudentList([{ id: "s1", name: "Ana", cpf: "12345678901", email: "ana@example.com" }]);
     fetchMock.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ classes: [{ id: "c1", topic: "ES", year: 2026, semester: 1, studentIds: ["s1"] }] })
+      json: async () => ({ classes: [{ id: "c1", topic: "ES", year: 2026, semester: 1, capacity: 40, studentIds: ["s1"] }] })
     });
     fetchMock.mockResolvedValueOnce({
       ok: true,
@@ -410,7 +414,7 @@ describe("Detalhe da turma (alunos e avaliações)", () => {
     setupDetailMocks();
     await navigateToDetail();
 
-    mockClassList([{ id: "c1", topic: "Engenharia de Software", year: 2026, semester: 1, studentIds: ["s1"] }]);
+    mockClassList([{ id: "c1", topic: "Engenharia de Software", year: 2026, semester: 1, capacity: 40, studentIds: ["s1"] }]);
     fireEvent.click(screen.getByRole("button", { name: /voltar para turmas/i }));
 
     await screen.findByRole("heading", { name: /gerenciamento de turmas/i });
