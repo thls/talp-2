@@ -18,6 +18,9 @@ type Props = {
   onRequestDelete: (cls: Class) => void;
   onConfirmDelete: (cls: Class) => void;
   onCancelDelete: () => void;
+  calendarItems: string[];
+  calendarView: boolean;
+  onToggleCalendarView: (calendar: boolean) => void;
 };
 
 export function ClassesRoute({
@@ -34,23 +37,26 @@ export function ClassesRoute({
   onStartEdit,
   onRequestDelete,
   onConfirmDelete,
-  onCancelDelete
+  onCancelDelete,
+  calendarItems,
+  calendarView,
+  onToggleCalendarView
 }: Props) {
   return (
     <section className="space-y-lg">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-h1 text-primary">Gerenciamento de turmas</h1>
-          <p className="font-body-md text-secondary">Schedule and monitor institutional curriculum delivery.</p>
+          <p className="font-body-md text-secondary">Gerencie calendário e acompanhamento das turmas.</p>
         </div>
         <div className="flex rounded-lg border border-outline-variant bg-surface-container p-1">
-          <button type="button" className="flex items-center space-x-2 rounded-md bg-white px-4 py-2 font-bold text-primary shadow-sm">
+          <button type="button" onClick={() => onToggleCalendarView(false)} className={`flex items-center space-x-2 rounded-md px-4 py-2 ${!calendarView ? "bg-white font-bold text-primary shadow-sm" : "font-medium text-secondary"}`}>
             <span className="material-symbols-outlined text-[20px]">list</span>
-            <span className="text-body-sm">List View</span>
+            <span className="text-body-sm">Visualização em lista</span>
           </button>
-          <button type="button" className="flex items-center space-x-2 rounded-md px-4 py-2 font-medium text-secondary">
+          <button type="button" onClick={() => onToggleCalendarView(true)} className={`flex items-center space-x-2 rounded-md px-4 py-2 ${calendarView ? "bg-white font-bold text-primary shadow-sm" : "font-medium text-secondary"}`}>
             <span className="material-symbols-outlined text-[20px]">calendar_view_day</span>
-            <span className="text-body-sm">Calendar View</span>
+            <span className="text-body-sm">Visualização em calendário</span>
           </button>
         </div>
       </div>
@@ -61,7 +67,7 @@ export function ClassesRoute({
             <span className="material-symbols-outlined">school</span>
           </div>
           <div>
-            <p className="text-label-caps uppercase text-secondary">Total Classes</p>
+            <p className="text-label-caps uppercase text-secondary">Total de turmas</p>
             <p className="text-h2 text-primary">{classes.length}</p>
           </div>
         </div>
@@ -70,17 +76,8 @@ export function ClassesRoute({
             <span className="material-symbols-outlined">person_add</span>
           </div>
           <div>
-            <p className="text-label-caps uppercase text-secondary">Enrollments</p>
+            <p className="text-label-caps uppercase text-secondary">Matrículas</p>
             <p className="text-h2 text-primary">{classes.reduce((acc, cls) => acc + cls.studentIds.length, 0)}</p>
-          </div>
-        </div>
-        <div className="flex items-center space-x-4 rounded-xl border border-outline-variant bg-surface-container-lowest p-md">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-fixed/30 text-primary-container">
-            <span className="material-symbols-outlined">meeting_room</span>
-          </div>
-          <div>
-            <p className="text-label-caps uppercase text-secondary">Rooms Active</p>
-            <p className="text-h2 text-primary">{Math.max(0, classes.length - 1)}</p>
           </div>
         </div>
         <div className="flex items-center space-x-4 rounded-xl border border-outline-variant bg-surface-container-lowest p-md">
@@ -88,11 +85,22 @@ export function ClassesRoute({
             <span className="material-symbols-outlined">warning</span>
           </div>
           <div>
-            <p className="text-label-caps uppercase text-secondary">At Capacity</p>
-            <p className="text-h2 text-primary">{classes.filter((c) => c.studentIds.length >= 40).length}</p>
+            <p className="text-label-caps uppercase text-secondary">No limite de capacidade</p>
+            <p className="text-h2 text-primary">{classes.filter((c) => c.studentIds.length >= c.capacity).length}</p>
           </div>
         </div>
       </div>
+
+      {calendarView && (
+        <div className="rounded-xl border border-outline-variant bg-white p-6">
+          <h3 className="mb-4 text-h3 text-primary">Calendário de turmas</h3>
+          <div className="space-y-2">
+            {calendarItems.map((item) => (
+              <p key={item} className="rounded-md bg-surface-container px-3 py-2 text-body-sm text-secondary">{item}</p>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-12 gap-gutter">
         <div className="col-span-12 space-y-md lg:col-span-3">
@@ -134,6 +142,18 @@ export function ClassesRoute({
                   <option value="2">2</option>
                 </select>
               </div>
+              <div>
+                <label htmlFor="capacity" className="mb-2 block text-label-caps text-secondary">CAPACIDADE</label>
+                <input
+                  id="capacity"
+                  name="capacity"
+                  type="number"
+                  min={1}
+                  className="w-full rounded-lg border border-outline-variant bg-background px-3 py-2 text-body-sm"
+                  value={classForm.capacity}
+                  onChange={(e) => onClassFormChange("capacity", e.target.value)}
+                />
+              </div>
               <div className="flex flex-wrap gap-2">
                 <button type="submit" disabled={loading} className="rounded-lg bg-primary px-4 py-2 font-bold text-white">
                   {loading ? "Salvando..." : editingClassId ? "Salvar edição" : "Cadastrar turma"}
@@ -153,10 +173,10 @@ export function ClassesRoute({
             <table className="w-full border-collapse text-left">
               <thead>
                 <tr className="border-b border-outline-variant bg-slate-50">
-                  <th className="px-md py-4 text-left text-xs font-label-caps uppercase tracking-wider text-secondary">Class Name</th>
-                  <th className="px-md py-4 text-left text-xs font-label-caps uppercase tracking-wider text-secondary">Room / Time</th>
-                  <th className="px-md py-4 text-left text-xs font-label-caps uppercase tracking-wider text-secondary">Enrollment</th>
-                  <th className="px-md py-4 text-right text-xs font-label-caps uppercase tracking-wider text-secondary">Actions</th>
+                  <th className="px-md py-4 text-left text-xs font-label-caps uppercase tracking-wider text-secondary">Turma</th>
+                  <th className="px-md py-4 text-left text-xs font-label-caps uppercase tracking-wider text-secondary">Sala / Horário</th>
+                  <th className="px-md py-4 text-left text-xs font-label-caps uppercase tracking-wider text-secondary">Matrículas</th>
+                  <th className="px-md py-4 text-right text-xs font-label-caps uppercase tracking-wider text-secondary">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -173,12 +193,12 @@ export function ClassesRoute({
                       </td>
                       <td className="px-md py-4 text-body-sm text-secondary">
                         <p>{cls.room}</p>
-                        <p>Seg, Qua 10:00 AM</p>
+                        <p>Semestre {cls.semester} de {cls.year}</p>
                       </td>
                       <td className="px-md py-4">
                         <div className="flex w-32 flex-col">
                           <div className="mb-1 flex justify-between text-xs">
-                            <span className="font-medium">{cls.studentIds.length}/45</span>
+                            <span className="font-medium">{cls.studentIds.length}/{cls.capacity}</span>
                             <span className="text-secondary">{cls.occupancy}%</span>
                           </div>
                           <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">

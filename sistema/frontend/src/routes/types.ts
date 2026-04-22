@@ -5,6 +5,7 @@ export type Class = {
   topic: string;
   year: number;
   semester: number;
+  capacity: number;
   studentIds: string[];
 };
 
@@ -22,7 +23,8 @@ export type Stats = {
   studentCount: number;
   classCount: number;
   gradeCount: number;
+  averageGrade: number;
 };
 
 export type StudentFormValues = { name: string; cpf: string; email: string };
-export type ClassFormValues = { topic: string; year: string; semester: string };
+export type ClassFormValues = { topic: string; year: string; semester: string; capacity: string };

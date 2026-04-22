@@ -38,12 +38,12 @@ export function ClassDetailRoute({
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-h1 text-primary">Detalhe da turma</h1>
-          <p className="text-body-md text-secondary">Grading & Evaluations</p>
+          <p className="text-body-md text-secondary">Avaliações e desempenho</p>
         </div>
         <div className="flex items-center gap-3">
           <select className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-body-md">
-            <option>Final Examination</option>
-            <option>Mid-term Project</option>
+            <option>Avaliação final</option>
+            <option>Projeto intermediário</option>
           </select>
           <button type="button" className="rounded-lg bg-primary px-6 py-2.5 text-on-primary">Aplicar alterações</button>
         </div>
@@ -59,7 +59,7 @@ export function ClassDetailRoute({
       <div className="grid gap-6 lg:grid-cols-12">
         <div className="lg:col-span-8">
           <div className={`${panelClass} p-6`}>
-            <h3 className="mb-4 text-h3 text-primary">Grade Distribution</h3>
+            <h3 className="mb-4 text-h3 text-primary">Distribuição de conceitos</h3>
             <div className="flex h-40 items-end justify-between gap-3">
               {[15, 25, 65, 85, 45].map((value, idx) => (
                 <div key={`${value}-${idx}`} className="flex flex-1 flex-col items-center gap-2">
@@ -72,12 +72,30 @@ export function ClassDetailRoute({
         </div>
         <div className="space-y-6 lg:col-span-4">
           <div className="rounded-xl bg-primary-container p-6 text-on-primary">
-            <p className="text-label-caps text-on-primary-container">Class Average</p>
-            <p className="text-4xl font-bold">84.2%</p>
+            <p className="text-label-caps text-on-primary-container">Média da turma</p>
+            <p className="text-4xl font-bold">
+              {(() => {
+                const valueByConcept: Record<string, number> = { MANA: 4, MPA: 7, MA: 10 };
+                if (classDetail.grades.length === 0) return "0.00";
+                const sum = classDetail.grades.reduce(
+                  (acc, grade) => acc + (valueByConcept[grade.concept] ?? 0),
+                  0
+                );
+                return (sum / classDetail.grades.length).toFixed(2);
+              })()}
+            </p>
           </div>
           <div className={`${panelClass} p-6`}>
-            <p className="text-label-caps text-secondary">Pending Entry</p>
-            <p className="text-4xl font-bold text-primary">06</p>
+            <p className="text-label-caps text-secondary">Lançamentos pendentes</p>
+            <p className="text-4xl font-bold text-primary">
+              {classDetail.students.reduce((acc, student) => {
+                const hasAll = metas.every(
+                  (meta) =>
+                    classDetail.grades.some((grade) => grade.studentId === student.id && grade.meta === meta)
+                );
+                return hasAll ? acc : acc + 1;
+              }, 0)}
+            </p>
           </div>
         </div>
       </div>
@@ -174,7 +192,7 @@ export function ClassDetailRoute({
                     </td>
                     <td className={tableCellClass}>
                       <span className="rounded-full bg-tertiary-fixed/40 px-2 py-1 text-[11px] font-bold uppercase text-on-tertiary-fixed-variant">
-                        Saved
+                        Salvo
                       </span>
                     </td>
                   </tr>

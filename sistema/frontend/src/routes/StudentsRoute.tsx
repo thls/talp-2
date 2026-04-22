@@ -17,6 +17,9 @@ type Props = {
   onRequestDelete: (student: Student) => void;
   onConfirmDelete: (student: Student) => void;
   onCancelDelete: () => void;
+  filterTerm: string;
+  onFilterTermChange: (value: string) => void;
+  onExportCsv: () => void;
 };
 
 export function StudentsRoute({
@@ -34,23 +37,32 @@ export function StudentsRoute({
   onStartEdit,
   onRequestDelete,
   onConfirmDelete,
-  onCancelDelete
+  onCancelDelete,
+  filterTerm,
+  onFilterTermChange,
+  onExportCsv
 }: Props) {
   return (
     <section className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-h1 text-primary">Gerenciamento de alunos</h1>
-          <p className="text-body-md text-secondary">Student Directory</p>
+          <p className="text-body-md text-secondary">Diretório de alunos</p>
         </div>
         <div className="flex gap-2">
+          <input
+            value={filterTerm}
+            onChange={(event) => onFilterTermChange(event.target.value)}
+            placeholder="Filtrar por nome, CPF ou email"
+            className="w-64 rounded-lg border border-outline-variant bg-surface-container-lowest px-4 py-2 text-body-sm"
+          />
           <button type="button" className="flex items-center gap-2 rounded-lg border border-outline-variant bg-surface-container-lowest px-4 py-2 text-body-sm">
             <span className="material-symbols-outlined text-sm">filter_list</span>
-            Filter
+            Filtro
           </button>
-          <button type="button" className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-body-sm text-on-primary">
+          <button type="button" onClick={onExportCsv} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-body-sm text-on-primary">
             <span className="material-symbols-outlined text-sm">file_download</span>
-            Export CSV
+            Exportar CSV
           </button>
         </div>
       </div>
@@ -150,21 +162,7 @@ export function StudentsRoute({
             )}
           </div>
         </div>
-        <aside className="space-y-6 lg:col-span-4">
-          <div className={`${panelClass} p-6`}>
-            <h3 className="mb-4 text-h3 text-primary">Enrollment Distribution</h3>
-            <div className="space-y-3 text-body-sm">
-              <div><p className="mb-1 flex justify-between"><span>Grade 10</span><span className="font-bold text-primary">42%</span></p><div className="h-2 rounded-full bg-surface-container"><div className="h-full w-[42%] rounded-full bg-primary" /></div></div>
-              <div><p className="mb-1 flex justify-between"><span>Grade 11</span><span className="font-bold text-primary">35%</span></p><div className="h-2 rounded-full bg-surface-container"><div className="h-full w-[35%] rounded-full bg-primary-container" /></div></div>
-              <div><p className="mb-1 flex justify-between"><span>Grade 12</span><span className="font-bold text-primary">23%</span></p><div className="h-2 rounded-full bg-surface-container"><div className="h-full w-[23%] rounded-full bg-secondary" /></div></div>
-            </div>
-          </div>
-          <div className="rounded-xl bg-primary p-6 text-on-primary shadow-lg">
-            <h3 className="mb-2 text-h3">Academic Insights</h3>
-            <p className="mb-5 text-body-sm text-on-primary-container">12 estudantes precisam de reforço em matemática.</p>
-            <button type="button" className="w-full rounded-lg bg-surface-container-lowest py-3 font-bold text-primary">View Intervention Report</button>
-          </div>
-        </aside>
+        <aside className="space-y-6 lg:col-span-4" />
       </div>
     </section>
   );

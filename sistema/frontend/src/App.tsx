@@ -20,7 +20,7 @@ const METAS = ["Requisitos", "Testes", "Implementação"] as const;
 const GRADE_CONCEPTS = ["MANA", "MPA", "MA"] as const;
 
 const initialStudentForm: StudentFormValues = { name: "", cpf: "", email: "" };
-const initialClassForm: ClassFormValues = { topic: "", year: "", semester: "" };
+const initialClassForm: ClassFormValues = { topic: "", year: "", semester: "", capacity: "40" };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -60,28 +60,37 @@ export function App() {
   // Class detail state
   const [classDetail, setClassDetail] = useState<ClassDetail | null>(null);
   const [gradeEdits, setGradeEdits] = useState<Map<string, string>>(new Map());
+  const [searchTerm, setSearchTerm] = useState("");
+  const [studentsFilterTerm, setStudentsFilterTerm] = useState("");
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<
+    Array<{ id: string; studentName: string; status: string; totalChanges: number; date: string }>
+  >([]);
+  const [calendarView, setCalendarView] = useState(false);
 
   // ─── Data fetching ────────────────────────────────────────────────────────
 
   useEffect(() => {
-    void fetchStudents();
-  }, []);
-
-  useEffect(() => {
-    if (view.type === "classes") void fetchClasses();
     if (view.type === "classDetail") void fetchClassDetail(view.classId);
     if (view.type === "dashboard") void fetchStats();
   }, [view]);
 
-  async function fetchStudents() {
-    const res = await fetch(`${API_URL}/students`);
+  useEffect(() => {
+    if (view.type === "students") void fetchStudents(searchTerm);
+    if (view.type === "classes") void fetchClasses(searchTerm);
+  }, [searchTerm, view.type]);
+
+  async function fetchStudents(search = "") {
+    const query = search ? `?search=${encodeURIComponent(search)}` : "";
+    const res = await fetch(`${API_URL}/students${query}`);
     if (!res.ok) throw new Error("Falha ao carregar alunos.");
     const data = (await res.json()) as { students: Student[] };
     setStudents(data.students);
   }
 
-  async function fetchClasses() {
-    const res = await fetch(`${API_URL}/classes`);
+  async function fetchClasses(search = "") {
+    const query = search ? `?search=${encodeURIComponent(search)}` : "";
+    const res = await fetch(`${API_URL}/classes${query}`);
     if (!res.ok) throw new Error("Falha ao carregar turmas.");
     const data = (await res.json()) as { classes: Class[] };
     setClasses(data.classes);
@@ -106,8 +115,17 @@ export function App() {
       const data = (await res.json()) as Stats;
       setStats(data);
     } catch {
-      setStats({ studentCount: students.length, classCount: classes.length, gradeCount: 0 });
+      setStats({ studentCount: students.length, classCount: classes.length, gradeCount: 0, averageGrade: 0 });
     }
+  }
+
+  async function fetchNotifications() {
+    const res = await fetch(`${API_URL}/notifications`);
+    if (!res.ok) throw new Error("Falha ao carregar notificações.");
+    const data = (await res.json()) as {
+      notifications: Array<{ id: string; studentName: string; status: string; totalChanges: number; date: string }>;
+    };
+    setNotifications(data.notifications);
   }
 
   // ─── Navigation ──────────────────────────────────────────────────────────
@@ -120,6 +138,7 @@ export function App() {
   function navigateTo(v: View) {
     clearMessages();
     setView(v);
+    setSearchTerm("");
   }
 
   // ─── Student CRUD ─────────────────────────────────────────────────────────
@@ -210,7 +229,11 @@ export function App() {
   // ─── Class CRUD ───────────────────────────────────────────────────────────
 
   const hasMissingClassFields = useMemo(
-    () => !classForm.topic.trim() || !classForm.year.trim() || !classForm.semester.trim(),
+    () =>
+      !classForm.topic.trim() ||
+      !classForm.year.trim() ||
+      !classForm.semester.trim() ||
+      !classForm.capacity.trim(),
     [classForm]
   );
 
@@ -218,12 +241,17 @@ export function App() {
     event.preventDefault();
     clearMessages();
 
-    if (hasMissingClassFields) { setError("Preencha tópico, ano e semestre."); return; }
+    if (hasMissingClassFields) { setError("Preencha tópico, ano, semestre e capacidade."); return; }
 
     const year = Number(classForm.year);
     const semester = Number(classForm.semester);
+    const capacity = Number(classForm.capacity);
     if (!Number.isInteger(year) || year < 2000) { setError("Ano inválido."); return; }
     if (semester !== 1 && semester !== 2) { setError("Semestre deve ser 1 ou 2."); return; }
+    if (!Number.isInteger(capacity) || capacity < 1) {
+      setError("Capacidade deve ser um inteiro maior que zero.");
+      return;
+    }
 
     try {
       setLoading(true);
@@ -232,7 +260,7 @@ export function App() {
       const res = await fetch(url, {
         method: isEditing ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic: classForm.topic.trim(), year, semester })
+        body: JSON.stringify({ topic: classForm.topic.trim(), year, semester, capacity })
       });
       if (!res.ok) {
         const data = (await res.json()) as { message?: string };
@@ -258,7 +286,12 @@ export function App() {
   function startEditClass(cls: Class) {
     clearMessages();
     setEditingClassId(cls.id);
-    setClassForm({ topic: cls.topic, year: String(cls.year), semester: String(cls.semester) });
+    setClassForm({
+      topic: cls.topic,
+      year: String(cls.year),
+      semester: String(cls.semester),
+      capacity: String(cls.capacity)
+    });
   }
 
   function cancelEditClass() {
@@ -394,8 +427,42 @@ export function App() {
   const classesWithMeta = classes.map((cls, idx) => ({
     ...cls,
     room: `Sala ${100 + idx}`,
-    occupancy: cls.studentIds.length > 0 ? Math.min(100, Math.round((cls.studentIds.length / 45) * 100)) : 0
+    occupancy:
+      cls.studentIds.length > 0 ? Math.min(100, Math.round((cls.studentIds.length / cls.capacity) * 100)) : 0
   }));
+  const dashboardCalendarItems = classes.length
+    ? classes.map((cls) => `${cls.year}.${cls.semester} • ${cls.topic} • ${cls.studentIds.length}/${cls.capacity} matrículas`)
+    : ["Sem turmas cadastradas no calendário."];
+  const classesCalendarItems = classes.length
+    ? classes.map((cls) => `${cls.topic} — ${cls.year}/${cls.semester} • Capacidade ${cls.capacity}`)
+    : ["Sem eventos de turma para exibir."];
+  const filteredStudents = useMemo(() => {
+    const term = studentsFilterTerm.trim().toLowerCase();
+    if (!term) return students;
+    return students.filter(
+      (student) =>
+        student.name.toLowerCase().includes(term) ||
+        student.email.toLowerCase().includes(term) ||
+        student.cpf.includes(term.replace(/\D/g, ""))
+    );
+  }, [students, studentsFilterTerm]);
+
+  function exportStudentsCsv() {
+    const rows = [
+      ["nome", "cpf", "email"],
+      ...filteredStudents.map((student) => [student.name, student.cpf, student.email])
+    ];
+    const content = rows.map((row) => row.map((cell) => `"${cell.replaceAll("\"", "\"\"")}"`).join(",")).join("\n");
+    const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "alunos.csv");
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <div className="min-h-screen bg-background text-on-background font-body-md">
@@ -455,17 +522,13 @@ export function App() {
             <span className="material-symbols-outlined">grade</span>
             Avaliações
           </button>
-          <button type="button" className={`${navButtonBase} text-slate-500 hover:bg-slate-50 hover:text-[#2D3282]`}>
-            <span className="material-symbols-outlined">settings</span>
-            Settings
-          </button>
         </nav>
         <div className="mt-auto px-6">
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <p className="mb-2 text-[10px] font-label-caps uppercase tracking-widest text-secondary">System Status</p>
+            <p className="mb-2 text-[10px] font-label-caps uppercase tracking-widest text-secondary">Status do sistema</p>
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              <span className="text-body-sm text-[#2D3282]">All systems operational</span>
+              <span className="text-body-sm text-[#2D3282]">Todos os sistemas operacionais</span>
             </div>
           </div>
         </div>
@@ -474,26 +537,60 @@ export function App() {
       <div className="ml-64 min-h-screen">
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white/80 px-8 backdrop-blur-md">
           <div className="flex items-center gap-3">
-            <button type="button" className="rounded-full p-2 text-[#2D3282] hover:bg-slate-100">
+            <button type="button" onClick={() => navigateTo({ type: "dashboard" })} className="rounded-full p-2 text-[#2D3282] hover:bg-slate-100">
               <span className="material-symbols-outlined">menu</span>
             </button>
             <h2 className="font-h3 text-lg text-[#2D3282]">
-              Institutional Overview
+              Visão institucional
             </h2>
           </div>
           <div className="flex items-center gap-4">
             <div className="hidden items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-body-sm text-secondary md:flex">
               <span className="material-symbols-outlined text-sm">search</span>
-              <input className="w-44 bg-transparent" placeholder="Search records..." />
+              <input
+                className="w-44 bg-transparent"
+                placeholder="Buscar registros..."
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+              />
             </div>
             <div className="relative">
-              <span className="material-symbols-outlined text-slate-500">notifications</span>
-              <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-error" />
+              <button
+                type="button"
+                onClick={() => {
+                  const nextOpen = !notificationsOpen;
+                  setNotificationsOpen(nextOpen);
+                  if (nextOpen) void fetchNotifications();
+                }}
+                className="rounded-full p-2 hover:bg-slate-100"
+              >
+                <span className="material-symbols-outlined text-slate-500">notifications</span>
+                <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-error" />
+              </button>
+              {notificationsOpen && (
+                <div className="absolute right-0 top-12 z-50 w-96 rounded-lg border border-slate-200 bg-white p-3 shadow-lg">
+                  <p className="mb-2 text-sm font-bold text-primary">Notificações</p>
+                  {notifications.length === 0 ? (
+                    <p className="text-sm text-secondary">Nenhuma notificação disponível.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {notifications.map((notification) => (
+                        <li key={notification.id} className="rounded border border-slate-100 p-2 text-sm">
+                          <p className="font-medium text-on-surface">{notification.studentName}</p>
+                          <p className="text-secondary">
+                            {notification.totalChanges} alterações • {notification.status} • {notification.date}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
             </div>
             <div className="hidden items-center gap-3 border-l border-slate-200 pl-4 md:flex">
               <div className="text-right">
-                <p className="text-body-sm font-bold text-[#2D3282]">Admin User</p>
-                <p className="text-[10px] uppercase text-slate-500">Principal's Office</p>
+                <p className="text-body-sm font-bold text-[#2D3282]">Usuário administrador</p>
+                <p className="text-[10px] uppercase text-slate-500">Coordenação acadêmica</p>
               </div>
               <div className="h-10 w-10 rounded-full bg-primary-container" />
             </div>
@@ -516,6 +613,8 @@ export function App() {
               panelClass={panelClass}
               tableHeaderClass={tableHeaderClass}
               tableCellClass={tableCellClass}
+              calendarItems={dashboardCalendarItems}
+              onNewEnrollment={() => navigateTo({ type: "classes" })}
             />
           )}
 
@@ -524,7 +623,7 @@ export function App() {
               panelClass={panelClass}
               tableHeaderClass={tableHeaderClass}
               tableCellClass={tableCellClass}
-              students={students}
+              students={filteredStudents}
               studentForm={studentForm}
               loading={loading}
               editingStudentId={editingStudentId}
@@ -538,6 +637,9 @@ export function App() {
                 void confirmDeleteStudent(student);
               }}
               onCancelDelete={cancelDeleteStudent}
+              filterTerm={studentsFilterTerm}
+              onFilterTermChange={setStudentsFilterTerm}
+              onExportCsv={exportStudentsCsv}
             />
           )}
 
@@ -559,6 +661,9 @@ export function App() {
                 void confirmDeleteClass(cls);
               }}
               onCancelDelete={cancelDeleteClass}
+              calendarItems={classesCalendarItems}
+              calendarView={calendarView}
+              onToggleCalendarView={setCalendarView}
             />
           )}
 
