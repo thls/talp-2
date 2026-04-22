@@ -39,6 +39,11 @@ export function ClassDetailRoute({
     const percent = total > 0 ? Math.round((count / total) * 100) : 0;
     return { concept, count, percent };
   });
+  const conceptColors: Record<string, string> = {
+    MANA: "bg-[#f97316]",
+    MPA: "bg-[#6366f1]",
+    MA: "bg-[#22c55e]"
+  };
 
   return (
     <section className="space-y-8">
@@ -66,13 +71,32 @@ export function ClassDetailRoute({
       <div className="grid gap-6 lg:grid-cols-12">
         <div className="lg:col-span-8">
           <div className={`${panelClass} p-6`}>
-            <h3 className="mb-4 text-h3 text-primary">Distribuição de conceitos</h3>
-            <div className="flex h-40 items-end justify-between gap-3">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-h3 text-primary">Distribuição de conceitos</h3>
+              <span className="text-xs text-secondary">
+                Total de lançamentos: {classDetail.grades.length}
+              </span>
+            </div>
+            <div className="space-y-4">
               {conceptDistribution.map((item) => (
-                <div key={item.concept} className="flex flex-1 flex-col items-center gap-2">
-                  <div className="w-full rounded-t-lg bg-slate-200" style={{ height: `${Math.max(item.percent, 6)}%` }} />
-                  <span className="text-label-caps text-secondary">{item.concept}</span>
-                  <span className="text-[10px] text-secondary">{item.count}</span>
+                <div key={item.concept} className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`h-2.5 w-2.5 rounded-full ${conceptColors[item.concept] ?? "bg-slate-400"}`}
+                      />
+                      <span className="text-label-caps text-secondary">{item.concept}</span>
+                    </div>
+                    <span className="text-xs font-semibold text-secondary">
+                      {item.count} ({item.percent}%)
+                    </span>
+                  </div>
+                  <div className="h-3 w-full overflow-hidden rounded-full bg-slate-100">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${conceptColors[item.concept] ?? "bg-slate-400"}`}
+                      style={{ width: `${item.percent}%` }}
+                    />
+                  </div>
                 </div>
               ))}
             </div>

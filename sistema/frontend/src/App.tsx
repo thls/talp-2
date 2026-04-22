@@ -36,6 +36,16 @@ function toApiCpf(cpf: string): string {
   return cpf.replace(/\D/g, "");
 }
 
+function maskCpf(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+  if (digits.length <= 9) {
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+  }
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+}
+
 // ─── App ─────────────────────────────────────────────────────────────────────
 
 export function App() {
@@ -199,7 +209,7 @@ export function App() {
   function startEditStudent(student: Student) {
     clearMessages();
     setEditingStudentId(student.id);
-    setStudentForm({ name: student.name, cpf: student.cpf, email: student.email });
+    setStudentForm({ name: student.name, cpf: maskCpf(student.cpf), email: student.email });
   }
 
   function cancelEditStudent() {
@@ -652,7 +662,12 @@ export function App() {
               editingStudentId={editingStudentId}
               pendingDeleteStudentId={pendingDeleteStudentId}
               onSubmit={handleStudentSubmit}
-              onStudentFormChange={(field, value) => setStudentForm((c) => ({ ...c, [field]: value }))}
+              onStudentFormChange={(field, value) =>
+                setStudentForm((c) => ({
+                  ...c,
+                  [field]: field === "cpf" ? maskCpf(value) : value
+                }))
+              }
               onCancelEdit={cancelEditStudent}
               onStartEdit={startEditStudent}
               onRequestDelete={requestDeleteStudent}
