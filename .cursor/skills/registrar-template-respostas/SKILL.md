@@ -12,7 +12,7 @@ Adicionar uma nova linha em `TemplateDeRespostas.csv` (na raiz do projeto) somen
 ## Regras fixas
 
 - Arquivo-alvo: `TemplateDeRespostas.csv`
-- Separador: `;`
+- Separador: `,`
 - Colunas (ordem obrigatoria):
   - `Prompt`
   - `Issues`

@@ -42,7 +42,7 @@ def main() -> int:
         writer = csv.DictWriter(
             f,
             fieldnames=FIELDNAMES,
-            delimiter=";",
+            delimiter=",",
             quoting=csv.QUOTE_MINIMAL,
         )
         if should_write_header:
@@ -58,7 +58,7 @@ def main() -> int:
             }
         )
 
-    total_rows = count_data_rows(csv_path, delimiter=";")
+    total_rows = count_data_rows(csv_path, delimiter=",")
     print(f"Arquivo atualizado: {csv_path}")
     print(f"Linhas de dados: {total_rows}")
     return 0
