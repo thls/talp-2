@@ -11,4 +11,25 @@
 body {
   background-color: #f7f9fb;
   min-height: 100dvh;
+  font-family: "Public Sans", sans-serif;
+  color: #191c1e;
+}
+
+h1,
+h2,
+h3 {
+  font-family: "Lexend", sans-serif;
+}
+
+button,
+input,
+select {
+  transition: all 150ms ease;
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: #15196c;
+  box-shadow: 0 0 0 2px rgb(21 25 108 / 15%);
 }
