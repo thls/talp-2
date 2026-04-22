@@ -7,6 +7,7 @@ export type Class = {
   topic: string;
   year: number;
   semester: number;
+  capacity: number;
   studentIds: string[];
   createdAt: string;
 };
@@ -29,6 +30,14 @@ function isClassLike(value: unknown): value is Class {
   );
 }
 
+function toSafeCapacity(value: unknown): number {
+  const capacity = Number(value);
+  if (!Number.isInteger(capacity) || capacity < 1) {
+    return 40;
+  }
+  return capacity;
+}
+
 export class ClassStore {
   private readonly filePath: string;
 
@@ -46,7 +55,7 @@ export class ClassStore {
     return payload.classes.find((c) => c.id === id) ?? null;
   }
 
-  async add(input: { topic: string; year: number; semester: number }): Promise<Class> {
+  async add(input: { topic: string; year: number; semester: number; capacity: number }): Promise<Class> {
     const payload = await this.readClassesFile();
     const topic = input.topic.trim();
 
@@ -63,6 +72,7 @@ export class ClassStore {
       topic,
       year: input.year,
       semester: input.semester,
+      capacity: toSafeCapacity(input.capacity),
       studentIds: [],
       createdAt: new Date().toISOString()
     };
@@ -74,7 +84,7 @@ export class ClassStore {
 
   async update(
     id: string,
-    input: { topic: string; year: number; semester: number }
+    input: { topic: string; year: number; semester: number; capacity: number }
   ): Promise<Class> {
     const payload = await this.readClassesFile();
     const index = payload.classes.findIndex((c) => c.id === id);
@@ -88,7 +98,17 @@ export class ClassStore {
     if (isDuplicate) throw new Error("DUPLICATE_CLASS");
 
     const current = payload.classes[index];
-    const updated: Class = { ...current, topic, year: input.year, semester: input.semester };
+    const safeCapacity = toSafeCapacity(input.capacity);
+    if (current.studentIds.length > safeCapacity) {
+      throw new Error("CAPACITY_BELOW_ENROLLMENTS");
+    }
+    const updated: Class = {
+      ...current,
+      topic,
+      year: input.year,
+      semester: input.semester,
+      capacity: safeCapacity
+    };
     payload.classes[index] = updated;
     await this.writeClassesFile(payload);
     return updated;
@@ -109,6 +129,7 @@ export class ClassStore {
 
     const cls = payload.classes[index];
     if (cls.studentIds.includes(studentId)) throw new Error("STUDENT_ALREADY_ENROLLED");
+    if (cls.studentIds.length >= cls.capacity) throw new Error("CLASS_CAPACITY_REACHED");
 
     const updated: Class = { ...cls, studentIds: [...cls.studentIds, studentId] };
     payload.classes[index] = updated;
@@ -152,6 +173,7 @@ export class ClassStore {
           topic: String(c.topic).trim(),
           year: Number(c.year),
           semester: Number(c.semester),
+          capacity: toSafeCapacity(c.capacity),
           studentIds: Array.isArray(c.studentIds)
             ? (c.studentIds as unknown[]).filter((s): s is string => typeof s === "string")
             : [],

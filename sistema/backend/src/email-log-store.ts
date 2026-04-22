@@ -53,6 +53,11 @@ export class EmailLogStore {
     );
   }
 
+  async list(): Promise<EmailLog[]> {
+    const payload = await this.readLogsFile();
+    return payload.logs;
+  }
+
   async createLog(input: {
     studentId: string;
     date: string;
